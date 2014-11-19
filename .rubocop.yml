@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+
+AllCops:
+  Include:
+    - Gemfile
+    - attributes/**/*
+    - recipes/**/*
+    - libraries/**/*
+    - providers/**/*
+    - resources/**/*
+  Exclude:
+    - test/**/*
+    - vendor/**/*
+    - debug_shell.rb
+
+SingleSpaceBeforeFirstArg:
+  Exclude:
+    - '**/metadata.rb'
+
+LineLength:
+  Enabled: false
