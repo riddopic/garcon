@@ -17,9 +17,9 @@
 # limitations under the License.
 #
 
+require 'uri'
 require 'thread'
 require 'net/http'
-require 'uri'
 require 'digest/sha2'
 
 # Helper methods for cookbook.
@@ -79,23 +79,9 @@ module Garcon
     recipe_block(description, &block_body)
   end
 
-  ######## THREAD #######
-  def thread_block_run(&block)
-    @run_context.resource_collection = Chef::ResourceCollection.new
-    instance_eval(&block)
-    ThreadPool.schedule { Chef::Runner.new(@run_context).converge }
-  end
-
-  def thread_block(description, &block)
-    recipe = self
-    ruby_block "recipe_block[#{description}]" do
-      block { recipe.instance_eval(&block) }
-    end
-  end
-
   def recipe_thread(description, &block)
-    block_body = proc { fork { thread_block_run(&block) }}
-    thread_block(description, &block_body)
+    block_body = proc { ThreadPool.schedule { recipe_block_run(&block) }}
+    recipe_block(description, &block_body)
   end
 
   # Return a cleanly join URI/URL segments into a cleanly normalized URL that
@@ -122,43 +108,51 @@ module Garcon
   #
   # @param [Array] urls
   #   list of urls with fils to download
-  # @param [String] dir
+  # @param [String] dstdir
   #   directory where to save the downloaded files
   # @param [String] server
   #   name of server to setup persistent connection with
   # @param [Integer] thread_count
   #   number of threads for concurrent requests
   #
-  def site_sucker(urls, dir, server, thread_count = 4)
+  def remote_files(urls, dstdir, server, opts)
+    thread_count = opts.fetch(:thread_count, 4)
+    owner        = opts.fetch(:owner, nil)
+    group        = opts.fetch(:group, nil)
+
     queue = Queue.new
     urls.map { |url| queue << url }
-
     threads = thread_count.times.map do
       Thread.new do
-      # ThreadPool.post do
         Net::HTTP.start(server, 80) do |http|
           while !queue.empty? && url = queue.pop
             uri = URI(url)
-            dst = ::File.join(dir, ::File.basename(url))
-            Chef::Log.info "【$$】get: #{uri}"
+            file = ::File.join(dstdir, ::File.basename(url))
+            Chef::Log.info "Downloading from 【#{server}】#{uri}"
             request = Net::HTTP::Get.new uri.request_uri
             http.read_timeout = 500
             http.request request do |response|
-              open dst, 'w' do |io|
+              open file, 'w' do |io|
                 response.read_body do |chunk|
                   io.write chunk
                 end
               end
             end
-            Chef::Log.info "【$$】got: #{uri}"
-            # NOTE: the observer consums the running thread
-            notify_observers(dst)
+            if owner && group
+              FileUtils.chown(owner, group, file)
+            elsif owner
+              FileUtils.chown(owner, nil, file)
+            elsif group
+              FileUtils.chown(nil, group, file)
+            end
+            Chef::Log.info "Downloaded from 【#{server}】to #{file}"
           end
         end
       end
     end
     threads.each(&:join)
   end
+  alias_method :dl_files, :remote_files
 
   # Safely requires a gem, if it's not installed it will be installed for you
   # and then required.
@@ -205,7 +199,7 @@ module Garcon
   # A sorta thread-safe list, nothing too hardcore but good enough. Or as the
   # kids say now Minimum Viable Product (MVP), as we adults know it as, shit. So
   # yes, I'm saying it's a shitty list, but that's all that I need for this
-  # shitty task.
+  # shitty task. ;-)
   #
   class List
     def initialize
@@ -217,6 +211,7 @@ module Garcon
     def size
       @mutex.synchronize { @list.size }
     end
+    alias_method :length, :size
 
     def empty?
       @mutex.synchronize { @list.empty? }
@@ -412,6 +407,147 @@ module Garcon
         end
       end
       resource
+    end
+  end
+
+  # Deep merge value into node using output path. If the value provided is
+  # nil then perform operation.
+  #
+  # @param [Object] element
+  #   the node or mash into which the results will be deep merged
+  # @param [Object] output_path
+  #   the path on the node on which to deep merge the results
+  # @param [Object] value
+  #   the value to merge
+  #
+  def deep_merge(element, output_path, value)
+    if value
+      existing = output_path.nil? ? element :
+        output_path.split('.').inject(element.respond_to?(:override) ?
+          element.override : element) { |elm, k| element.nil? ? nil : elm[k] }
+      if existing
+        results = ::Chef::Mixin::DeepMerge.deep_merge(value, existing).to_hash
+      else
+        results = value.dup
+      end
+      set_attribute(element, output_path, results)
+    end
+  end
+
+  # Ensure attribute is present.
+  #
+  # @param [Object] element
+  #   the root element used to base lookup on
+  # @param [String, Symbol] key
+  #   the path to lookup
+  # @param [Object] type
+  #   the expected type of the value, Set to nil to ignore type checking.
+  # @param [Object] prefix
+  #   the prefix already traversed to get to root
+  #
+  def ensure_attribute(element, key, type = nil, prefix = nil)
+    value = get_attribute(element, key, type, prefix)
+    label = prefix ? "#{prefix}.#{key}" : key
+    raise "Attribute '#{label}' is missing" if value.nil?
+    value
+  end
+
+  # Get attribute if present.
+  #
+  # @param [Object] element
+  #   the root element used to base lookup on
+  # @param [String, Symbol] key
+  #   the path to lookup
+  # @param [Object] prefix
+  #   the prefix already traversed to get to root
+  #
+  def get_attribute(element, key, type = nil, prefix = nil)
+    key_parts = key.split('.')
+    output_entry = key_parts[0...-1].inject(element.to_hash) do |elm, k|
+      elm.nil? ? nil : elm[k]
+    end
+    return nil unless output_entry
+    value = output_entry[key_parts.last]
+    return nil if value.nil?
+    label = prefix ? "#{prefix}.#{key}" : key
+    if type && !value.is_a?(type)
+      raise "The value of attribute '#{label}' is '#{value.inspect}' and " \
+            "this is not of the expected type #{type.inspect}"
+    end
+    value
+  end
+
+
+  # Set attribute value on mash using a path. If the element is a node then
+  # use override priority.
+  #
+  # @param [Object] element
+  #   the mash/node into which the results will be set
+  # @param [String, Symbol] key
+  #   path on the node on which to set value
+  # @param [Object] value
+  #   the value to set
+  #
+  def set_attribute(element, key, value)
+    key_parts = key.nil? ? [] : key.split('.')
+    base = element.respond_to?(:override) ? element.override : element
+    output_entry = key_parts[0...-1].inject(base) { |elm, k| elm[k] }
+    output_entry[key_parts.last] = value
+  end
+
+  # Invoke the action block in a separate run context and if any resources are
+  # modified within the sub context then mark this node as updated.
+  #
+  def notifying_action(key, &block)
+    action key do
+      # So that we can refer to these within the sub-run-context block.
+      _cached_new_resource = new_resource
+      _cached_current_resource = current_resource
+
+      # Setup a sub-run-context.
+      sub_run_context = @run_context.dup
+      sub_run_context.resource_collection = Chef::ResourceCollection.new
+
+      # Declare sub-resources within the sub-run-context. Since they are
+      # declared here, they do not pollute the parent run-context.
+      begin
+        original_run_context, @run_context = @run_context, sub_run_context
+        instance_eval(&block)
+      ensure
+        @run_context = original_run_context
+      end
+
+      # Converge the sub-run-context inside the provider action.
+      # Make sure to mark the resource as updated-by-last-action if any sub-run-
+      # context resources were updated (any actual actions taken against the
+      # system) during the sub-run-context convergence.
+      begin
+        Chef::Runner.new(sub_run_context).converge
+      ensure
+        if sub_run_context.resource_collection.any?(&:updated?)
+          new_resource.updated_by_last_action(true)
+        end
+      end
+    end
+  end
+end
+
+class Hash
+  # Searches a deeply nested datastructure for a key path, and returns the
+  # associated value. If a block is provided its value will be returned if the
+  # key does not exist.
+  #
+  class UndefinedPathError < StandardError; end
+  def retrieve(*args, &block)
+    args.reduce(self) do |obj, arg|
+      begin
+        arg = Integer(arg) if obj.is_a? Array
+        obj.fetch(arg)
+      rescue ArgumentError, IndexError, NoMethodError => e
+        break block.call(arg) if block
+        raise UndefinedPathError,
+          "Could not retrieve path (#{args.join(' > ')}) at #{arg}", e.backtrace
+      end
     end
   end
 end

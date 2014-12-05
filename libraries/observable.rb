@@ -100,7 +100,7 @@ module Observers
           end
         end
       end
-      Chef::Log.info "Consider yourself notified"
+      Chef::Log.debug "Observer notification complete"
       true
     end
 

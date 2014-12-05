@@ -16,10 +16,10 @@ Hipster, hoodie ninja cool awesom.
 
 Attribute | Default | Description | Choices
 ----------|---------|-------------|--------
-`node[:garcon][:thread_pool][:min_pool_size]`   | `"8"`      |  |
-`node[:garcon][:thread_pool][:max_pool_size]`   | `"120"`    |  |
-`node[:garcon][:thread_pool][:max_queue_size]`  | `"0"`      |  |
-`node[:garcon][:thread_pool][:idletime]`        | `"120"`    |  |
+`node[:garcon][:thread_pool][:min_pool_size]` | `"8"` |  |
+`node[:garcon][:thread_pool][:max_pool_size]` | `"120"` |  |
+`node[:garcon][:thread_pool][:max_queue_size]` | `"0"` |  |
+`node[:garcon][:thread_pool][:idletime]` | `"120"` |  |
 `node[:garcon][:thread_pool][:overflow_policy]` | `":abort"` |  |
 
 ## Recipes

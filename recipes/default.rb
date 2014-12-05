@@ -19,8 +19,14 @@
 # limitations under the License.
 #
 
-node.override[:'build-essential'][:compile_time] = true
-single_include 'build-essential::default'
+chef_gem 'concurrent-ruby'
+require 'concurrent'
 
-chef_gem('hoodie') { action :nothing }.run_action(:install)
+begin
+  chef_gem('hoodie') { action :nothing }.run_action(:install)
+rescue
+  node.override[:'build-essential'][:compile_time] = true
+  single_include 'build-essential::default'
+  chef_gem('hoodie') { action :nothing }.run_action(:install)
+end
 require 'hoodie' unless defined?(Hoodie)

@@ -26,7 +26,7 @@ end
 
 YARD::Config.load_plugin 'redcarpet-ext'
 YARD::Rake::YardocTask.new do |t|
-  t.files = ['**/*.rb', '-', 'README.md', 'CHANGELOG.md', 'LICENSE.txt']
+  t.files = ['**/*.rb', '-', 'README.md', 'CHANGELOG.md', 'LICENSE']
   t.options = ['--markup-provider=redcarpet', '--markup=markdown']
 end
 
