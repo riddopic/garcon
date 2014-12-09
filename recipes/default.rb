@@ -20,7 +20,10 @@
 #
 
 chef_gem 'concurrent-ruby'
-require 'concurrent'
+require 'concurrent' unless defined?(Concurrent)
+
+chef_gem('rubyzip') { action :nothing }.run_action(:install)
+require 'zip' unless defined?(Zip)
 
 begin
   chef_gem('hoodie') { action :nothing }.run_action(:install)
@@ -30,3 +33,12 @@ rescue
   chef_gem('hoodie') { action :nothing }.run_action(:install)
 end
 require 'hoodie' unless defined?(Hoodie)
+
+_a2 = Concurrent::Promise.execute do
+  package 'gnutls'
+  execute :aria2 do
+    command "rpm -Uvh #{node[:garcon][:aria2].join(' ')}"
+    not_if { installed?('aria2c') }
+    action :run
+  end
+end

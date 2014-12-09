@@ -100,6 +100,41 @@ module Garcon
     leadingslash + paths.join('/') + trailingslash
   end
 
+  # Finds a command in $PATH
+  #
+  # @param [String] cmd
+  #   the command to find
+  #
+  # @return [String, nil]
+  #
+  def which(cmd)
+    if Pathname.new(cmd).absolute?
+      File.executable?(cmd) ? cmd : nil
+    else
+      paths = ENV['PATH'].split(::File::PATH_SEPARATOR) + %w(
+        /bin /usr/bin /sbin /usr/sbin)
+
+      paths.each do |path|
+        possible = File.join(path, cmd)
+        return possible if File.executable?(possible)
+      end
+
+      nil
+    end
+  end
+
+  # Boolean method to check if a command line utility is installed.
+  #
+  # @param [String] cmd
+  #   the command to find
+  #
+  # @return [Boolean]
+  #   true if the command is found in the path, false otherwise
+  #
+  def installed?(cmd)
+    !which(cmd).nil?
+  end
+
   # Provides a very fast HTTP download alternative to remote_file. Using
   # persistent connection for multiple requests provides a huge speed increase
   # since we don’t have to setup connection for each download. Also, we spin up
@@ -423,7 +458,7 @@ module Garcon
   def deep_merge(element, output_path, value)
     if value
       existing = output_path.nil? ? element :
-        output_path.split('.').inject(element.respond_to?(:override) ?
+        output_path.split('.').reduce(element.respond_to?(:override) ?
           element.override : element) { |elm, k| element.nil? ? nil : elm[k] }
       if existing
         results = ::Chef::Mixin::DeepMerge.deep_merge(value, existing).to_hash
@@ -463,7 +498,7 @@ module Garcon
   #
   def get_attribute(element, key, type = nil, prefix = nil)
     key_parts = key.split('.')
-    output_entry = key_parts[0...-1].inject(element.to_hash) do |elm, k|
+    output_entry = key_parts[0...-1].reduce(element.to_hash) do |elm, k|
       elm.nil? ? nil : elm[k]
     end
     return nil unless output_entry
@@ -491,7 +526,7 @@ module Garcon
   def set_attribute(element, key, value)
     key_parts = key.nil? ? [] : key.split('.')
     base = element.respond_to?(:override) ? element.override : element
-    output_entry = key_parts[0...-1].inject(base) { |elm, k| elm[k] }
+    output_entry = key_parts[0...-1].reduce(base) { |elm, k| elm[k] }
     output_entry[key_parts.last] = value
   end
 
