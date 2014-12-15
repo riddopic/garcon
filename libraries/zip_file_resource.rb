@@ -35,7 +35,9 @@ class Chef::Resource::ZipFile < Chef::Resource::LWRPBase
   default_action :nothing
 
   attribute :source,       kind_of:  String, name_attribute:true
-  attribute :destination,  kind_of:  String,                 default: nil
+  # unzip where zip_file is if no destination is given.
+  attribute :destination,  kind_of:  String, default: lazy { |new_resource|
+    ::File.dirname(new_resource.source) }
   attribute :owner,        kind_of: [String, Integer],       default: nil
   attribute :group,        kind_of: [String, Integer],       default: nil
   attribute :mode,         kind_of:  Integer,                default: nil

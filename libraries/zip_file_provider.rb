@@ -17,9 +17,7 @@
 # limitations under the License.
 #
 
-require 'uri'  unless defined?(URI)
 require 'find' unless defined?(Find)
-require 'zip'  unless defined?(Zip)
 require_relative 'garcon'
 
 class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
@@ -43,11 +41,17 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
   end
 
   action :unzip do
+    safe_require('zip', constant: 'Zip')
+
     converge_by 'Unzipping file' do
       unzip(new_resource.source,
             new_resource.destination,
             new_resource.remove_after)
       apply_ownership(new_resource.destination)
+
+      Chef::Log.info "#{new_resource.source} unzipped to " \
+                     "#{new_resource.destination}"
+      new_resource.updated_by_last_action(true)
     end
   end
 
@@ -57,26 +61,7 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
 
   protected #      A T T E N Z I O N E   A R E A   P R O T E T T A
 
-  def zip(dir, zip_file, remove_after = false)
-      Zip::File.open(zip_file, Zip::File::CREATE)do |zipfile|
-        Find.find(dir) do |path|
-          Find.prune if File.basename(path)[0] == ?.
-          dest = /#{dir}\/(\w.*)/.match(path)
-          # Skip files if they exists
-          begin
-            zipfile.add(dest[1],path) if dest
-          rescue Zip::ZipEntryExistsError
-          end
-        end
-      end
-      FileUtils.rm_rf(dir) if remove_after
-    end
-  end
-
-  def unzip(zip_file, destination = nil, remove_after)
-    # unzip where zip_file is if no destination is given.
-    destination = ::File.dirname(zip_file) if destination.nil?
-
+  def unzip(zip_file, destination, remove_after)
     Zip::File.open(zip_file) do |zip|
       zip.each do |entry|
         path = ::File.join(destination, entry.name)
@@ -101,3 +86,4 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
     end
   end
 end
+

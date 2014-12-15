@@ -3,7 +3,7 @@
 A collection of methods helpful in writing complex cookbooks that are
 impossible to comprehend.
 
-Hipster, hoodie ninja cool awesom.
+Hipster, hoodie ninja cool awesome.
 
 ## Requirements
 
@@ -16,11 +16,6 @@ Hipster, hoodie ninja cool awesom.
 
 Attribute | Default | Description | Choices
 ----------|---------|-------------|--------
-`node[:garcon][:thread_pool][:min_pool_size]` | `"8"` |  |
-`node[:garcon][:thread_pool][:max_pool_size]` | `"120"` |  |
-`node[:garcon][:thread_pool][:max_queue_size]` | `"0"` |  |
-`node[:garcon][:thread_pool][:idletime]` | `"120"` |  |
-`node[:garcon][:thread_pool][:overflow_policy]` | `":abort"` |  |
 
 ## Recipes
 
@@ -30,39 +25,7 @@ Attribute | Default | Description | Choices
 
 ### Source Code
 
-The [**chef-garcon**](https://github.com/riddopic/garcon.git)
-is hosted on the Git.
-To clone the project run
-
-````bash
-$ git clone https://github.com/riddopic/garcon.git
-````
-
 ### Rake
-
-Run `rake -T` to see all Rake tasks.
-
-````
-rake all                          # Run all tasks
-rake doc                          # Build documentation
-rake foodcritic                   # Lint Chef cookbooks
-rake kitchen:all                  # Run all test instances
-rake kitchen:default-centos-65    # Run default-centos-65 test instance
-rake kitchen:default-ubuntu-1404  # Run default-ubuntu-1404 test instance
-rake kitchen:default-w2k8r1-vbox  # Run Windows 2008 R1 test instance
-rake kitchen:default-w2k8r2-vbox  # Run Windows 2008 R2 test instance
-rake kitchen:default-w2k12r1-vbox # Run Windows 2012 R2 test instance
-rake readme                       # Generate README.md from _README.md.erb
-rake rubocop                      # Run RuboCop
-rake rubocop:auto_correct         # Auto-correct RuboCop offenses
-rake spec                         # Run RSpec code examples
-rake test                         # Run kitchen integration tests
-rake yard                         # Generate YARD Documentation
-````
-
-### Thor
-
-Run `thor -T` to see all Thor tasks.
 
 ### Guard
 

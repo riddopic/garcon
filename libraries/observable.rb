@@ -17,22 +17,11 @@
 # limitations under the License.
 #
 
-=begin
-#<
-The observer pattern is a software design pattern in which an object, called
-the subject, maintains a list of its dependents, called observers, and notifies
-them automatically of any state changes, usually by calling one of their
-methods. It is mainly used to implement distributed event handling systems.
-
-@section Examples
-
-    # An example coming soon to a theater near you
-    observable_event(:watcher) do
-      ruby_block  do
-      end
-    end
-#>
-=end
+# The observer pattern is a software design pattern in which an object, called
+# the subject, maintains a list of its dependents, called observers, and
+# notifies them automatically of any state changes, usually by calling one of
+# their methods. It is mainly used to implement distributed event handling
+# systems.
 
 module Observable
   def self.event(key, args = {}, &block)
