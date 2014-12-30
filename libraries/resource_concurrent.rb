@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
 # Cookbook Name:: garcon
-# Attributes:: default
+# HWRP:: resource_concurrent
 #
 # Author: Stefano Harding <riddopic@gmail.com>
 #
@@ -20,11 +20,27 @@
 # limitations under the License.
 #
 
-default[:garcon][:repo][:gpgcheck] = true
-default[:garcon][:repo][:gpgkey] = 'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
-default[:garcon][:repo][:mirrorlist] = case platform_version.to_i
-when 5
-  'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
-when 6, 2013, 2014
-  'http://mirrorlist.repoforge.org/el6/mirrors-rpmforge'
+class Chef::Resource::Concurrent < Chef::Resource::LWRPBase
+
+  identity_attr :name
+  provides :concurrent, os: 'linux'
+
+  self.resource_name = :concurrent
+
+  actions :run
+  default_action :run
+
+  state_attrs :state
+
+  attribute :name,  kind_of: [String, Symbol], name_attribute: true
+
+  attribute :mutex, kind_of: Class, default: nil
+
+  def block(&block)
+    if block_given? && block
+      @block = block
+    else
+      @block
+    end
+  end
 end

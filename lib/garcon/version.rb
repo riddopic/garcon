@@ -1,11 +1,8 @@
 # encoding: UTF-8
 #
-# Cookbook Name:: garcon
-# Attributes:: default
-#
 # Author: Stefano Harding <riddopic@gmail.com>
 #
-# Copyright (C) 2014-2015 Stefano Harding
+# Copyright (C) 2012-2014 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +17,6 @@
 # limitations under the License.
 #
 
-default[:garcon][:repo][:gpgcheck] = true
-default[:garcon][:repo][:gpgkey] = 'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
-default[:garcon][:repo][:mirrorlist] = case platform_version.to_i
-when 5
-  'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
-when 6, 2013, 2014
-  'http://mirrorlist.repoforge.org/el6/mirrors-rpmforge'
+module Garcon
+  VERSION = '0.6.0'
 end

@@ -1,11 +1,8 @@
 # encoding: UTF-8
 #
-# Cookbook Name:: garcon
-# Lobraries:: garcon
-#
 # Author: Stefano Harding <riddopic@gmail.com>
 #
-# Copyright (C) 2014-2015 Stefano Harding
+# Copyright (C) 2012-2014 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,84 +17,102 @@
 # limitations under the License.
 #
 
-# Helper methods for cookbook.
-#
+require 'logger'
+require 'time'
+
 module Garcon
-  # A set of helper methods shared by all resources and providers.
-  #
-  module Helpers
-    def monitor
-      @@monitor ||= Monitor.new
+  module Logging
+    @loggers ||= {}
+
+    def demodulize(class_name_in_module)
+      class_name_in_module.to_s.sub(/^.*::/, '')
     end
 
-    # Helper method to get Aria2 installed, enables the yum repo, installs then
-    # removes the repo.
-    def prerequisite
-      unless installed?('aria2c')
-        monitor.synchronize do
-          package('gnutls') { action :nothing }.run_action(:install)
-          yum = Chef::Resource::YumRepository.new('garcon', run_context)
-          yum.mirrorlist node[:garcon][:repo][:mirrorlist]
-          yum.gpgcheck node[:garcon][:repo][:gpgcheck]
-          yum.gpgkey node[:garcon][:repo][:gpgkey]
-          yum.run_action(:create)
-          package('aria2') { action :nothing }.run_action(:install)
-          yum.run_action(:delete)
+    class << self
+
+      class NoLogger < Logger
+        def initialize(*args)
+        end
+
+        def add(*args, &block)
+        end
+      end
+
+      def demodulize(class_name_in_module)
+        class_name_in_module.to_s.sub(/^.*::/, '')
+      end
+
+      def log(prefix)
+        @loggers[prefix] ||= logger_for(prefix)
+      end
+
+      def logger_for(prefix)
+
+        log = logger
+        log.progname = prefix
+        log.formatter = Garcon::Formatter.new
+        log.formatter.datetime_format = '%F %T'
+        log.level = eval(log_level)
+        log
+      end
+
+      def log=(log)
+        @log = log
+      end
+
+      def logger
+        Garcon.configuration.logging ? Logger.new($stdout) : NoLogger.new
+      end
+
+      def log_level
+        "Logger::#{Garcon.configuration.level.to_s.upcase}"
+      end
+    end
+
+    def self.included(base)
+      class << base
+        def log
+          prefix = self.class == Class ? self.to_s : self.class.to_s
+          Garcon::Logging.log(demodulize(prefix))
         end
       end
     end
 
-    # Runs the recipe in it's own thread. NOTE: You need to ensure that the
-    # recipe is thread safe and non-blocking.
-    #
-    # @param [String] recipe
-    #   the recipe to run
-    #
-    def threaded_include(recipe)
-      thread name { block { run_context.include_recipe recipe }}
-    end
-
-
-    def recipe_block(description, &block)
-      recipe = self
-      ruby_block "recipe_block[#{description}]" do
-        block do
-          recipe.instance_eval(&block)
-        end
-      end
-    end
-
-
-    def timers_for(jobs = [])
-      timers = Hoodie::Timers::Group.new
-      jobs.each.with_index(1) do |job, i|
-        timers.every(10+i+i) do
-          Chef::Log.info "#{job}: #{job.state}" unless job.fulfilled?
-        end
-      end
-
-      begin
-        Timeout.timeout(300) do
-          until jobs.map { |job| job.fulfilled? }
-            jobs.each { |j| fail "#{j} #{j.state}: #{j.reason}" if j.rejected? }
-            sleep 3
-            timers.wait
-          end
-        end
-      rescue Timeout::Error
-        Chef::Log.error 'Timeout waiting for threads:'
-        jobs.each { |j| Chef::Log.error "#{j}: #{j.state}" }
-        fail 'Failure due to Timeout::Error waiting on threads.'
-      ensure
-        timers.cancel
-      end
+    def log
+      prefix = self.class == Class ? self.to_s : self.class.to_s
+      Garcon::Logging.log(demodulize(prefix))
     end
   end
 
-  unless Chef::Recipe.ancestors.include?(Garcon::Helpers)
-    Chef::Recipe.send(:include, Garcon::Helpers)
-    Chef::Resource.send(:include, Garcon::Helpers)
-    Chef::Provider.send(:include, Garcon::Helpers)
+  class Formatter < Logger::Formatter
+    attr_accessor :datetime_format
+
+    def initialize
+      @datetime_format = nil
+      super
+    end
+
+    def call(severity, time, progname, msg)
+      format % [
+        format_datetime(time).BLUE,
+        severity.GREEN,
+        msg2str(msg).strip.ORANGE
+      ]
+    end
+
+    private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
+
+    def format
+      "[%s] %5s: %s\n"
+    end
+
+    def format_datetime(time)
+      if @datetime_format.nil?
+        time.strftime("%Y-%m-%dT%H:%M:%S.") << "%06d " % time.usec
+      else
+        time.strftime(@datetime_format)
+      end
+    end
   end
 end
 
