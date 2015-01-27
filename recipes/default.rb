@@ -25,14 +25,15 @@ require 'concurrent' unless defined?(Concurrent)
 chef_gem('rubyzip') { action :nothing }.run_action(:install)
 require 'zip' unless defined?(Zip)
 
-begin
-  chef_gem('hoodie') { action :nothing }.run_action(:install)
-rescue
-  node.override[:'build-essential'][:compile_time] = true
-  single_include 'build-essential::default'
-  chef_gem('hoodie') { action :nothing }.run_action(:install)
-end
+node.override[:'build-essential'][:compile_time] = true
+single_include 'build-essential::default'
+
+chef_gem('hoodie') { action :nothing }.run_action(:install)
 require 'hoodie' unless defined?(Hoodie)
+
+Chef::Recipe.send(:include, Hoodie)
+Chef::Resource.send(:include, Hoodie)
+Chef::Provider.send(:include, Hoodie)
 
 _a2 = Concurrent::Promise.execute do
   package 'gnutls'

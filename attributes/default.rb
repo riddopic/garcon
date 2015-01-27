@@ -42,5 +42,5 @@ default[:garcon][:thread_pool][:overflow_policy] = :abort
 
 default[:garcon][:aria2] = [
   'http://repo.mudbox.dev/ibm/aria2-1.16.4-1.el6.rf.x86_64.rpm',
-  'http://repo.mudbox.dev/ibm/nettle-2.2-1.el6.rf.x86_64.RPM'
+  'http://repo.mudbox.dev/ibm/nettle-2.2-1.el6.rf.x86_64.rpm'
 ]
