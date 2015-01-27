@@ -27,33 +27,36 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
 
   use_inline_resources if defined?(:use_inline_resources)
 
-  # @return [Chef::Provider::ZipFile] Load and return the current resource.
-  def load_current_resource
-    @current_resource ||= Chef::Resource::ZipFile.new(new_resource.name)
-  end
-
-  # @return [TrueClass, FalseClass] WhyRun is supported by this provider.
+  # Boolean indicating if WhyRun is supported by this provider.
+  #
+  # @return [TrueClass, FalseClass]
+  #
+  # @api private
   def whyrun_supported?
     true
   end
 
+  # Load and return the current resource.
+  #
+  # @return [Chef::Provider::Dsccsetup]
+  #
+  # @api private
+  def load_current_resource
+    @current_resource ||= Chef::Resource::ZipFile.new(new_resource.name)
+  end
+
   action :unzip do
     monitor.synchronize do
-
       converge_by "Unziping #{new_resource.source} to #{new_resource.path}" do
         zip_file = cached_file(new_resource.source, new_resource.checksum)
         overwrite = new_resource.overwrite
-        announce "let's do it..."
         Zip::File.open(zip_file) do |zip|
           zip.each do |entry|
-            announce "Starting with #{entry}"
             path = ::File.join(new_resource.path, entry.name)
             FileUtils.mkdir_p(::File.dirname(path))
             if overwrite && ::File.exists?(path) && !::File.directory?(path)
-              announce "have a #{path}, deleting it..."
               FileUtils.rm(path)
             end
-            announce "Going to extract #{entry} to #{path}"
             zip.extract(entry, path)
           end
         end
@@ -65,24 +68,26 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
   end
 
   action :zip do
-    if ::File.exists?(new_resource.path) && !new_resource.overwrite
-      Chef::Log.info "#{new_resource.path} already exists - nothing to do"
-    else
-      ::File.unlink(new_resource.path) if ::File.exists?(new_resource.path)
-      if ::File.directory?(new_resource.source)
-        converge_by "Ziping #{new_resource.source} to #{new_resource.path}" do
-          z = Zip::File.new(new_resource.path, true)
-          Find.find(new_resource.source) do |f|
-            next if f == new_resource.source
-            zip_fname = f.sub(new_resource.source, '')
-            z.add(zip_fname, f)
-          end
-          z.close
-          do_acl_changes
-          new_resource.updated_by_last_action(true)
-        end
+    monitor.synchronize do
+      if ::File.exists?(new_resource.path) && !new_resource.overwrite
+        Chef::Log.info "#{new_resource.path} already exists - nothing to do"
       else
-        Chef::Log.info 'a valid directory must be specified for ziping'
+        ::File.unlink(new_resource.path) if ::File.exists?(new_resource.path)
+        if ::File.directory?(new_resource.source)
+          converge_by "Ziping #{new_resource.source} to #{new_resource.path}" do
+            z = Zip::File.new(new_resource.path, true)
+            Find.find(new_resource.source) do |f|
+              next if f == new_resource.source
+              zip_fname = f.sub(new_resource.source, '')
+              z.add(zip_fname, f)
+            end
+            z.close
+            do_acl_changes
+            new_resource.updated_by_last_action(true)
+          end
+        else
+          Chef::Log.info 'a valid directory must be specified for ziping'
+        end
       end
     end
   end
@@ -110,12 +115,8 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
   def cached_file(src, checksum = nil)
     if src =~ URI::ABS_URI && %w[ftp http https].include?(URI.parse(src).scheme)
       file = ::File.basename(URI.unescape(URI.parse(src).path))
-      announce "The file is #{file}"
       cache_file_path = ::File.join(Chef::Config[:file_cache_path], file)
-      announce "The file is #{file}, the cache_file_path is #{cache_file_path}"
-
       Chef::Log.info "Caching file #{src} at #{cache_file_path}"
-
       dl = Chef::Resource::Download.new(cache_file_path, run_context)
       dl.source src
       dl.checksum checksum if checksum
@@ -126,14 +127,4 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
 
     cache_file_path
   end
-
-  def resource_class
-    Chef::Resource::ZipFile
-  end
 end
-
-Chef::Platform.set(
-  platform: :linux,
-  resource: :zip_file,
-  provider: Chef::Provider::ZipFile
-)

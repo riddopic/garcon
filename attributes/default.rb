@@ -27,4 +27,6 @@ when 5
   'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
 when 6, 2013, 2014
   'http://mirrorlist.repoforge.org/el6/mirrors-rpmforge'
+when 7
+  'http://mirrorlist.repoforge.org/el7/mirrors-rpmforge'
 end

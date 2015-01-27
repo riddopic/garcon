@@ -20,233 +20,110 @@
 # limitations under the License.
 #
 
+require_relative 'pool'
+
 class Chef::Provider::Concurrent < Chef::Provider::LWRPBase
   include Garcon::Helpers
 
+  # def initialize(new_resource, run_context)
+  #   super
+  #   action_start
+  # end
+
   use_inline_resources if defined?(:use_inline_resources)
 
-  # @return [Chef::Provider::ZipFile] Load and return the current resource.
-  def load_current_resource
-    @current_resource ||= Chef::Resource::Concurrent.new(new_resource.name)
-  end
-
-  # @return [TrueClass, FalseClass] WhyRun is supported by this provider.
+  # Boolean indicating if WhyRun is supported by this provider.
+  #
+  # @return [TrueClass, FalseClass]
+  #
+  # @api private
   def whyrun_supported?
     true
   end
 
-  action :run do
-    converge_by "Concurrent #{new_resource.name} if you can..." do
-      cached_new_resource = new_resource
-      cached_current_resource = current_resource
+  # Load and return the current resource.
+  #
+  # @return [Chef::Provider::Dsccsetup]
+  #
+  # @api private
+  def load_current_resource
+    @current_resource ||= Chef::Resource::Concurrent.new(new_resource.name)
+  end
 
-      sub_run_context = @run_context.dup
-      sub_run_context.resource_collection = Chef::ResourceCollection.new
-
-      begin
-        original_run_context, @run_context = @run_context, sub_run_context
-        instance_eval(&@new_resource.block)
-      ensure
-        @run_context = original_run_context
+  def action_start
+    begin
+      Chef::Log.info 'Thread-pool already running - nothing to do' if @@pool
+    rescue
+      converge_by 'Concurrent thread-pool starting up.' do
+        @@pool ||= Thread.pool(new_resource.min, new_resource.max)
+        pool_handler
+        Chef::Log.info "Thread-pool #{@@pool} startup complete."
       end
+    end
+  end
 
-      begin
-        Thread.process do
-          Chef::Runner.new(sub_run_context).converge
-        end
-      ensure
-        if sub_run_context.resource_collection.any?(&:updated?)
-          new_resource.updated_by_last_action(true)
+	# Shut down the pool, it will block until all tasks have finished running.
+  #
+  def action_stop
+    if @@pool.shutdown?
+      Chef::Log.info "#{new_resource} already shutdown - nothing to do."
+    else
+      banner 'Concurrent thread-pool shutdown...'
+      converge_by "Concurrent pool #{new_resource} is being shutdown" do
+        @@pool.shutdown
+        Chef::Log.info "Pool #{new_resource} shutdown complete."
+      end
+    end
+  end
+
+  def action_run
+    @@pool.process do
+      job = job_num
+      banner "Job ID: #{job} ~ #{@@pool.waiting} x #{@@pool.spawned}"
+      converge_by "#{job}: Concurrent converge for #{new_resource.name}" do
+        begin
+          saved_run_context = @run_context
+          temp_run_context = @run_context.dup
+          @run_context = temp_run_context
+          @run_context.resource_collection = Chef::ResourceCollection.new
+
+          return_value = instance_eval(&@new_resource.block)
+          Chef::Runner.new(@run_context).converge
+          return_value
+        ensure
+          @run_context = saved_run_context
+          if temp_run_context.resource_collection.any? {|r| r.updated? }
+            new_resource.updated_by_last_action(true)
+          end
         end
       end
+      banner "Job ID: #{job} ~ #{@@pool.waiting} x #{@@pool.spawned}", :yellow
+      Chef::Log.info "#{job}: Completed converge for #{new_resource.name}"
     end
   end
 
   private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
 
-  # def recipe_block_run(&block)
-  #   @run_context.resource_collection = Chef::ResourceCollection.new
-  #   instance_eval(&block)
-  #   Chef::Runner.new(@run_context).converge
-  # end
-  #
-  # def recipe_block(description, &block)
-  #   recipe = self
-  #   ruby_block "recipe_block[#{description}]" do
-  #     block do
-  #       recipe.instance_eval(&block)
-  #     end
-  #   end
-  # end
-  #
-  # def recipe_fork(description, &block)
-  #   block_body = proc do
-  #     fork { recipe_block_run(&block) }
-  #   end
-  #   recipe_block(description, &block_body)
-  # end
-end
+  def job_num
+    @@job ||= 0
+    @@job += 1
+  end
 
-Chef::Platform.set(
-  platform: :linux,
-  resource: :concurrent,
-  provider: Chef::Provider::Concurrent
-)
+  def pool_handler
+    handler = ::File.join(node[:chef_handler][:handler_path], 'threadpool.rb')
 
-require 'thread'
+    cookbook_file handler do
+      owner 'root'
+      group 'root'
+      mode 00755
+      action :create
+    end
 
-# A channel lets you send and receive various messages in a thread-safe way.
-#
-# It also allows for guards upon sending and retrieval, to ensure the passed
-# messages are safe to be consumed.
-class Thread::Channel
-	# Create a channel with optional initial messages and optional channel guard.
-	def initialize (messages = [], &block)
-		@messages = []
-		@mutex    = Mutex.new
-		@check    = block
-
-		messages.each {|o|
-			send o
-		}
-	end
-
-	# Send a message to the channel.
-	#
-	# If there's a guard, the value is passed to it, if the guard returns a falsy value
-	# an ArgumentError exception is raised and the message is not sent.
-	def send (what)
-		if @check && !@check.call(what)
-			raise ArgumentError, 'guard mismatch'
-		end
-
-		@mutex.synchronize {
-			@messages << what
-
-			cond.broadcast if cond?
-		}
-
-		self
-	end
-
-	# Receive a message, if there are none the call blocks until there's one.
-	#
-	# If a block is passed, it's used as guard to match to a message.
-	def receive (&block)
-		message = nil
-		found   = false
-
-		if block
-			until found
-				@mutex.synchronize {
-					if index = @messages.find_index(&block)
-						message = @messages.delete_at(index)
-						found   = true
-					else
-						cond.wait @mutex
-					end
-				}
-			end
-		else
-			until found
-				@mutex.synchronize {
-					if @messages.empty?
-						cond.wait @mutex
-					end
-
-					unless @messages.empty?
-						message = @messages.shift
-						found   = true
-					end
-				}
-			end
-		end
-
-		message
-	end
-
-	# Receive a message, if there are none the call returns nil.
-	#
-	# If a block is passed, it's used as guard to match to a message.
-	def receive! (&block)
-		if block
-			@messages.delete_at(@messages.find_index(&block))
-		else
-			@messages.shift
-		end
-	end
-
-	private
-	def cond?
-		instance_variable_defined? :@cond
-	end
-
-	def cond
-		@cond ||= ConditionVariable.new
-	end
-end
-
-class Thread
-	# Helper to create a channel.
-	def self.channel (*args, &block)
-		Thread::Channel.new(*args, &block)
-	end
-end
-
-class Thread::Process
-	def self.all
-		@@processes ||= {}
-	end
-
-	def self.register (name, process)
-		all[name] = process
-	end
-
-	def self.unregister (name)
-		all.delete(name)
-	end
-
-	def self.[] (name)
-		all[name]
-	end
-
-	# Create a new process executing the block.
-	def initialize (&block)
-		@channel = Thread::Channel.new
-
-		Thread.new {
-			instance_eval(&block)
-
-			@channel = nil
-		}
-	end
-
-	# Send a message to the process.
-	def send (what)
-		unless @channel
-			raise RuntimeError, 'the process has terminated'
-		end
-
-		@channel.send(what)
-
-		self
-	end
-
-	alias << send
-
-	private
-	def receive
-		@channel.receive
-	end
-
-	def receive!
-		@channel.receive!
-	end
-end
-
-class Thread
-	# Helper to create a process.
-	def self.process (&block)
-		Thread::Process.new(&block)
-	end
+    chef_handler 'ThreadPool' do
+      source handler
+      arguments @@pool
+      supports :report => true, :exception => true
+      action :enable
+    end
+  end
 end

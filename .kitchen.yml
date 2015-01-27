@@ -2,18 +2,16 @@
 ---
 driver:
   name: vagrant
-  customize:
-    memory: 512
-    numvcpus: 2
 
 provisioner:
   name: chef_zero
   require_chef_omnibus: true
 
 platforms:
-  - name: centos-6.5
+  - name: centos-6
 
 suites:
   - name: default
     run_list:
       - recipe[garcon::default]
+      - recipe[garcon::development]

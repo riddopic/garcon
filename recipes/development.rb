@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
 # Cookbook Name:: garcon
-# HWRP:: resource_concurrent
+# Recipe:: default
 #
 # Author: Stefano Harding <riddopic@gmail.com>
 #
@@ -20,33 +20,18 @@
 # limitations under the License.
 #
 
-class Chef::Resource::Concurrent < Chef::Resource::LWRPBase
+# For cookbook development only...
+chef_gem('hoodie')        { action :nothing }.run_action(:install)
+chef_gem('awesome_print') { action :nothing }.run_action(:install)
+chef_gem('pry')           { action :nothing }.run_action(:install)
 
-  identity_attr :name
-  provides :concurrent, os: 'linux'
+require 'hoodie'         unless defined?(Hoodie)
+require 'hoodie/logging' unless defined?(Hoodie::Logging)
+require 'pry'
+require 'ap'
 
-  self.resource_name = :concurrent
+Chef::Recipe.send(:include,   Hoodie::Logging)
+Chef::Resource.send(:include, Hoodie::Logging)
+Chef::Provider.send(:include, Hoodie::Logging)
 
-  actions :start, :shutdown, :run, :join
-  default_action :run
-
-  state_attrs :state
-
-  attribute :name,  kind_of: [String, Symbol], name_attribute: true
-
-  attribute :lock, kind_of: Class, default: nil
-
-  attribute :min, kind_of: Integer, default: 4
-
-  attribute :max, kind_of: Integer, default: nil
-
-  attribute :block, :kind_of => Proc
-
-  def block(&block)
-    if block_given? && block
-      @block = block
-    else
-      @block
-    end
-  end
-end
+Hoodie.config { |c| c.logging = true }

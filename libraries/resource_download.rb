@@ -62,8 +62,8 @@ class Chef::Resource::Download < Chef::Resource::LWRPBase
     source.each do |src|
       unless absolute_uri?(src)
         raise Exceptions::InvalidRemoteFileURI, "#{src.inspect} is not a " \
-          "valid `source` parameter for #{resource_name}. `source` must be an " \
-          "absolute URI or an array of URIs."
+          "valid `source` parameter for #{resource_name}. `source` must be " \
+          "an absolute URI or an array of URIs."
       end
     end
     true

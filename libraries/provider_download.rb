@@ -28,12 +28,25 @@ class Chef::Provider::Download < Chef::Provider::LWRPBase
 
   def initialize(name, run_context = nil)
     super
-    prerequisite unless installed?('aria2c')
+    do_prerequisite unless installed?('aria2c')
   end
 
   use_inline_resources if defined?(:use_inline_resources)
 
-  # @return [Chef::Provider::Download] Load and return the current resource.
+  # Boolean indicating if WhyRun is supported by this provider.
+  #
+  # @return [TrueClass, FalseClass]
+  #
+  # @api private
+  def whyrun_supported?
+    true
+  end
+
+  # Load and return the current resource.
+  #
+  # @return [Chef::Provider::Dsccsetup]
+  #
+  # @api private
   def load_current_resource
     @current_resource ||= Chef::Resource::Download.new(new_resource.name)
     @current_resource.path(new_resource.path)
@@ -44,11 +57,6 @@ class Chef::Provider::Download < Chef::Provider::LWRPBase
       @current_resource.checksum(nil)
     end
     @current_resource
-  end
-
-  # @return [TrueClass, FalseClass] WhyRun is supported by this provider.
-  def whyrun_supported?
-    true
   end
 
   action :create do
@@ -108,6 +116,10 @@ class Chef::Provider::Download < Chef::Provider::LWRPBase
 
   private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
 
+  def do_prerequisite
+    concurrent(:pool) { block { prerequisite { |blk| self.send(:blk) } } }
+  end
+
   def do_acl_changes
     if access_controls.requires_changes?
       converge_by(access_controls.describe_changes) do
@@ -125,7 +137,6 @@ class Chef::Provider::Download < Chef::Provider::LWRPBase
       cmd << "--checksum=sha-256=#{new_resource.checksum} "
     end
     cmd << new_resource.source
-    announce "The cmd is #{cmd}"
     Chef::Log.info shell_out!(cmd).stdout
     do_acl_changes
   end
@@ -133,14 +144,4 @@ class Chef::Provider::Download < Chef::Provider::LWRPBase
   def do_backup(file = nil)
     Chef::Util::Backup.new(new_resource, file).backup!
   end
-
-  def resource_class
-    Chef::Resource::Download
-  end
 end
-
-Chef::Platform.set(
-  platform: :linux,
-  resource: :download,
-  provider: Chef::Provider::Download
-)

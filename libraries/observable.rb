@@ -26,6 +26,29 @@
 # their methods. It is mainly used to implement distributed event handling
 # systems.
 
+# observable_event(:event) do
+#   Chef::Log.info 'An observable event'
+#   ruby_block 'Inform on the observable event' do
+#     block do
+#       Chef::Log.info 'The observable event'
+#     end
+#   end
+# end
+#
+# ruby_block '--|--|--|-- This is before the observer --|--|--|--' do
+#   block do
+#     Chef::Log.info '--\--\--\-- Before observer --\--\--\--'
+#   end
+# end
+#
+# notify_observers(:event)
+#
+# ruby_block '--|--|--|-- This is after the observer --|--|--|--' do
+#   block do
+#     Chef::Log.info '--/--/--/-- After observer --/--/--/--'
+#   end
+# end
+
 module Observable
   def self.event(key, args = {}, &block)
     args = Mash.new(args)

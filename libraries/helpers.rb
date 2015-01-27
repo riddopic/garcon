@@ -30,6 +30,8 @@ module Garcon
   # A set of helper methods shared by all resources and providers.
   #
   module Helpers
+    include Chef::Mixin::ShellOut
+
     # Check to see if the recipe has already been included, if not include it.
     # It will return false if it has already been run or return the last value
     # of the includeed recipe.
@@ -104,7 +106,7 @@ module Garcon
     # @return [Integer]
     #   version of the cookbook.
     #
-    def version(name = nil)
+    def cookbook_version(name = nil)
       cookbook = name.nil? ? cookbook_name : name
       node.run_context.cookbook_collection[cookbook].metadata.version
     end
@@ -121,29 +123,34 @@ module Garcon
       !which(cmd).nil?
     end
 
-    # Set user, group, mode on a file or directory.
-    #
-    # @param file [String]
-    #   file set ownership and permissions on.
-    # @param owner [String]
-    #   set ownership of the file to the user specified.
-    # @param group [String]
-    #   set group ownership on the file to the group specified.
-    # @param mode [Integer]
-    #   set the mode of the file.
-    #
-    # @api private
-    def apply_owner(file, owner = nil, group = nil, mode = nil)
-      if ::File.directory?(file)
-        res = Chef::Resource::Directory.new(file, run_context)
-        res.recursive true
-      elsif ::File.exists?(file)
-        res = Chef::Resource::File.new(file, run_context)
+    def monitor
+      @@monitor ||= Monitor.new
+    end
+
+    # Helper method to get Aria2 installed, enables the yum repo, installs then
+    # removes the repo.
+    def prerequisite
+      monitor.synchronize do
+        package('gnutls') { action :nothing }.run_action(:install)
+        chef_gem('rubyzip') { action :nothing }.run_action(:install)
+        Chef::Recipe.send(:require, 'zip')
+        unless installed?('aria2c')
+          if platform_family?('rhel') && node[:platform_version].to_i == 7
+            Chef::Log.info shell_out!('rpm -Uvh http://bit.ly/1xWL2LX').stdout
+          else
+            begin
+              yum = Chef::Resource::YumRepository.new('garcon', run_context)
+              yum.mirrorlist node[:garcon][:repo][:mirrorlist]
+              yum.gpgcheck node[:garcon][:repo][:gpgcheck]
+              yum.gpgkey node[:garcon][:repo][:gpgkey]
+              yum.run_action(:create)
+              package('aria2') { action :nothing }.run_action(:install)
+            ensure
+              yum.run_action(:delete)
+            end
+          end
+        end
       end
-      res.owner owner if owner
-      res.group group if group
-      res.mode  mode  if mode
-      res.run_action(:create)
     end
 
     def count
@@ -152,14 +159,44 @@ module Garcon
     end
 
     def announce(msg = nil)
-      ca = "#{caller[1][/`.*'/][1..-2]}".blue
+      ca = "#{caller[1][/`.*'/][1..-2]}".yellow
       co = "#{count}".purple
       s = '⏐'.green
-      msg = msg.orange
-      Chef::Log.info "#{self.class} #{s} #{ca} #{s} #{co} #{s} #{msg}"
+      msg = msg.nil? ? nil : msg.cyan
+      log.info "#{self.class} #{s} #{ca} #{s} #{co} #{s} #{msg}"
     end
 
-    # Unshorten a URL.
+    def banner(msg = nil, color = :orange)
+      msg = msg.nil? ? nil : msg
+      log.info "#{msg}".send(color.to_sym)
+    end
+
+    def highlight
+      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡'.magenta
+      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡'.on_yellow
+      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡'.yellow
+    end
+    alias_method :h1, :highlight
+
+    def h2
+      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡'.magenta
+      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡'.on_magenta
+      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
+               '｡｡｡｡｡｡'.yellow
+    end
+
+    # Unshorten a shortened URL
     #
     # @param url [String] A shortened URL
     # @param [Hash] opts
@@ -178,7 +215,7 @@ module Garcon
         use_cache: opts.fetch(:use_cache, true)
       }
       url = (url =~ /^https?:/i) ? url : "http://#{url}"
-      _unshorten_(url, options)
+      __unshorten__(url, options)
     end
 
     private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
@@ -186,7 +223,7 @@ module Garcon
     @@cache = { }
 
     # @!visibility private
-    def _unshorten_(url, options, level = 0)
+    def __unshorten__(url, options, level = 0)
       return @@cache[url] if options[:use_cache] && @@cache[url]
       return url if level >= options[:max_level]
       uri = URI.parse(url) rescue nil
@@ -222,6 +259,7 @@ module Garcon
         super("Method '#{method}' needs to be implemented")
       end
     end
+    class InvalidPort < ArgumentError; end
   end
 
   unless Chef::Recipe.ancestors.include?(Garcon::Helpers)
