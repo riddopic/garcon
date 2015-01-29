@@ -36,10 +36,6 @@ single_include 'build-essential::default'
 chef_gem('hoodie') { action :nothing }.run_action(:install)
 require 'hoodie' unless defined?(Hoodie)
 
-Chef::Recipe.send(:include, Hoodie)
+Chef::Recipe.send(:include,   Hoodie)
 Chef::Resource.send(:include, Hoodie)
 Chef::Provider.send(:include, Hoodie)
-
-concurrent :rubyzip do
-  block { chef_gem('rubyzip') { action :nothing }.run_action(:install) }
-end
