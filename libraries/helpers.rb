@@ -245,7 +245,7 @@ module Garcon
       if response.is_a? Net::HTTPRedirection and response['location'] then
         location = URI.encode(response['location'])
         location = (uri + location).to_s if location
-        @@cache[url] = _unshorten_(location, options, level + 1)
+        @@cache[url] = __unshorten__(location, options, level + 1)
       else
         url
       end
