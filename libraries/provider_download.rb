@@ -31,6 +31,7 @@ class Chef::Provider::Download < Chef::Provider
 
   def initialize(new_resource, run_context)
     super
+    do_prerequisite unless installed?('aria2c')
   end
 
   # Boolean indicating if WhyRun is supported by this provider
@@ -162,6 +163,24 @@ class Chef::Provider::Download < Chef::Provider
       new_resource._?(:connections, '-x'),
       new_resource._?(:check_cert,  '--check-certificate=false'),
       new_resource.source)
+  end
+
+  def do_prerequisite
+    package('gnutls')   { action :nothing }.run_action(:install)
+    chef_gem('rubyzip') { action :nothing }.run_action(:install)
+    Chef::Recipe.send(:require, 'zip')
+    unless installed?('aria2c')
+      begin
+        yum = Chef::Resource::YumRepository.new('garcon', run_context)
+        yum.mirrorlist node[:garcon][:repo][:mirrorlist]
+        yum.gpgcheck   node[:garcon][:repo][:gpgcheck]
+        yum.gpgkey     node[:garcon][:repo][:gpgkey]
+        yum.run_action(:create)
+        package('aria2') { action :nothing }.run_action(:install)
+      ensure
+        yum.run_action(:delete)
+      end
+    end
   end
 
   # Command line executioner for running aria2c

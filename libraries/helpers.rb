@@ -131,15 +131,15 @@ module Garcon
     # removes the repo.
     def prerequisite
       monitor.synchronize do
-        package('gnutls') { action :nothing }.run_action(:install)
+        package('gnutls')   { action :nothing }.run_action(:install)
         chef_gem('rubyzip') { action :nothing }.run_action(:install)
         Chef::Recipe.send(:require, 'zip')
         unless installed?('aria2c')
           begin
             yum = Chef::Resource::YumRepository.new('garcon', run_context)
             yum.mirrorlist node[:garcon][:repo][:mirrorlist]
-            yum.gpgcheck node[:garcon][:repo][:gpgcheck]
-            yum.gpgkey node[:garcon][:repo][:gpgkey]
+            yum.gpgcheck   node[:garcon][:repo][:gpgcheck]
+            yum.gpgkey     node[:garcon][:repo][:gpgkey]
             yum.run_action(:create)
             package('aria2') { action :nothing }.run_action(:install)
           ensure
@@ -165,31 +165,6 @@ module Garcon
     def banner(msg = nil, color = :orange)
       msg = msg.nil? ? nil : msg
       log.info "#{msg}".send(color.to_sym)
-    end
-
-    def highlight
-      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡'.magenta
-      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡'.on_yellow
-      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡'.yellow
-    end
-    alias_method :h1, :highlight
-
-    def h2
-      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡'.magenta
-      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡'.on_magenta
-      log.info '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡｡' \
-               '｡｡｡｡｡｡'.yellow
     end
 
     # Unshorten a shortened URL
