@@ -3,9 +3,9 @@
 # Cookbook Name:: garcon
 # Libraries:: helpers
 #
-# Author: Stefano Harding <riddopic@gmail.com>
-#
-# Copyright (C) 2014-2015 Stefano Harding
+# Author:    Stefano Harding <riddopic@gmail.com>
+# License:   Apache License, Version 2.0
+# Copyright: (C) 2014-2015 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ module Garcon
   # A set of helper methods shared by all resources and providers.
   #
   module Validations
-
     # Matches on a string.
     STRING_VALID_REGEX = /\A[^\\\/\:\*\?\<\>\|]+\z/
 
@@ -57,119 +56,94 @@ module Garcon
     # Matches on any port from 0 to 65_535.
     PORTS_ALL_VALID_REGEX = /^(6553[0-5]|655[0-2]\d|65[0-4]\d\d|6[0-4]\d{3}|
                              [1-5]\d{4}|[1-9]\d{0,3}|0)$/
+    class << self
+      # Helper method to validate port numbers
+      #
+      # @yield [Integer]
+      # @return [Trueclass]
+      # @raise [Odsee::Exceptions::InvalidPort]
+      # @api private
+      def port?
+        ->(port) { validate_port(port) }
+      end
 
-    # def valid_fqdn(fqdn)
-    #   unless value =~ FQDN_VALID_REGEX
-    #     raise ArgumentError, "`#{fqdn}` is not a valid FQDN."
-    #   end
-    #   value
-    # end
-    #
-    # # Boolean, true if port number is within range, otherwise raises a
-    # # Validation::InvalidPort exception
-    # #
-    # # @param [Integer] port
-    # # @param [Range<Integer>] range
-    # #
-    # # @return [Trueclass]
-    # #
-    # # @raise [Validation::InvalidPort]
-    # #
-    # def valid_port?(port, range)
-    #   (range === port) ? true : (fail Validation::InvalidPort, port, range)
-    # end
-    #
-    # def validate_string(name, value, values)
-    #   unless values.include? value
-    #     raise RangeError, "Invalid value for '#{name}', accepted values are '#{values.join('\', \'')}'"
-    #   end
-    #   value
-    # end
-    #
-    # def validate_http_uri(name, value)
-    #   uri = URI value
-    #   uri = URI 'http://' + value unless uri.scheme
-    #   unless ['http', 'https'].include? uri.scheme.to_s.downcase
-    #     raise ArgumentError, "Invalid scheme for '#{name}' URI, accepted schemes are 'http' and 'https'"
-    #   end
-    #   uri
-    # end
-    #
-    # def validate_boolean(name, value)
-    #   unless value.is_a?(TrueClass) || value.is_a?(FalseClass)
-    #     raise TypeError, "Invalid value for '#{name}' expecting 'True' or 'False'"
-    #   end
-    #   value
-    # end
-    #
-    # def validate_time(name, value)
-    #   unless value =~ /^([01]?[0-9]|2[0-3])(\:[0-5][0-9]){1,2}$/
-    #     raise ArgumentError, "Invalid value for '#{name}', format is: 'HH:MM:SS'"
-    #   end
-    #   value
-    # end
-    #
-    # def validate_integer(name, value, min, max)
-    #   i = value.to_i
-    #   unless i >= min && i <= max && value.to_s =~ /^\d+$/
-    #     raise ArgumentError, "Invalid value for '#{name}', value must be between #{min} and #{max}"
-    #   end
-    #   i
-    # end
-    # def check_ipv4
-    #     lambda { |ip|
-    #         if ip =~ /^([0-9]{1,3}\.){3}[0-9]{1,3}$/
-    #             true
-    #         else
-    #             false
-    #         end
-    #     }
-    # end
-    #
-    # def check_ipv4_or_nil
-    #     lambda { |ip|
-    #         ip.kind_of?(NilClass) ? true : check_ipv4().call( ip )
-    #     }
-    # end
-    #
-    # def valid_ttl
-    #     lambda { |ttl| ( ttl.kind_of?( String ) and ( ttl =~ /^[0-9]+[ms]$/ ) ) ? true : false }
-    # end
-    #
-    # def valid_ttl_key key
-    #     lambda { |hash|
-    #         return true unless hash.has_key? key
-    #         return valid_ttl.call(hash[key])
-    #     }
-    # end
-    #
-    # def true_false
-    #     lambda { |val| [ TrueClass, FalseClass ].include? val.class }
-    # end
-    #
-    # def true_false_key key
-    #     lambda { |hash|
-    #         return true unless hash.has_key?( key )
-    #         return true_false.call( hash[key] )
-    #     }
-    # end
-    #
-    # def valid_range min, max
-    #     lambda { | val|
-    #         val >= min and val <= max
-    #     }
-    # end
-    #
-    # def valid_port min=0, max=65535
-    #     valid_range(min, max)
-    # end
-    #
-    # def key_valid_port key, min, max
-    #     lambda { |port|
-    #         return true unless port.has_key? key
-    #         return valid_port(min, max).call port[key]
-    #     }
-    # end
+      # Boolean, true if port number is within range, otherwise raises a
+      # Exceptions::InvalidPort
+      #
+      # @param [Integer] port
+      # @param [Range<Integer>] range
+      # @return [Trueclass]
+      # @raise [Odsee::Exceptions::InvalidPort]
+      # @api private
+      def valid_port?(port, range = 0..65_535)
+        (range === port) ? true : (fail InvalidPort.new port, range)
+      end
 
+      # Helper method to validate host name
+      #
+      # @yield [Integer]
+      # @return [Trueclass]
+      # @raise [Odsee::Exceptions::InvalidHost]
+      # @api private
+      def host?
+        ->(_host) { validate_host(name) }
+      end
+
+      # Validate the hostname, returns the IP address if valid, otherwise raises
+      # Exceptions::InvalidHost
+      #
+      # @param [String] host
+      # @return [Integer]
+      # @raise [Odsee::Exceptions::InvalidHost]
+      # @api private
+      def validate_host(host)
+        IPSocket.getaddress(host)
+      rescue
+        raise InvalidHost.new host
+      end
+
+      # Helper method to validate file
+      #
+      # @yield [Integer]
+      # @return [Trueclass]
+      # @raise [Odsee::Exceptions::InvalidFile]
+      # @api private
+      def file?
+        ->(file) { validate_file(file) }
+      end
+
+      # Boolean, true if file exists, otherwise raises a Exceptions::InvalidFile
+      #
+      # @param [String] file
+      # @return [Trueclass]
+      # @raise [Odsee::Exceptions::InvalidFile]
+      # @api private
+      def valid_file?(file)
+        ::File.exist?(file) ? true : (fail FileNotFound.new file)
+      end
+
+      # Helper method to validate file path
+      #
+      # @yield [Integer]
+      # @return [Trueclass]
+      # @raise [Odsee::Exceptions::InvalidFilePath]
+      # @api private
+      def path?
+        ->(_path) { validate_filepath(file) }
+      end
+
+      # Validate that the path specified is a file or directory, will raise
+      # Exceptions::InvalidFilePath if not
+      #
+      # @param [String] path
+      # @return [TrueClass]
+      # @raise [Odsee::Exceptions::InvalidFilePath]
+      # @api private
+      def validate_filepath?(path)
+        unless ::File.exist?(path) || ::File.directory?(path)
+          fail PathNotFound.new path
+        end
+      end
+    end
   end
 end

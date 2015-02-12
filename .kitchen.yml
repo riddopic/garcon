@@ -1,4 +1,5 @@
 # encoding: UTF-8
+#<% require 'kitchen-sync' %>
 ---
 driver:
   name: vagrant
@@ -9,9 +10,13 @@ provisioner:
 
 platforms:
   - name: centos-6
+    driver_config:
+      box: opscode-centos-6.6
+      box_url: http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-6.6_chef-provisionerless.box
 
 suites:
   - name: default
     run_list:
+      - recipe[test_fixtures::default]
       - recipe[garcon::default]
       - recipe[garcon::development]

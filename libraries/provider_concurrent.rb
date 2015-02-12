@@ -3,9 +3,9 @@
 # Cookbook Name:: garcon
 # HWRP:: provider_concurrent
 #
-# Author: Stefano Harding <riddopic@gmail.com>
-#
-# Copyright (C) 2014-2015 Stefano Harding
+# Author:    Stefano Harding <riddopic@gmail.com>
+# License:   Apache License, Version 2.0
+# Copyright: (C) 2014-2015 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,15 +22,14 @@
 
 require_relative 'pool'
 
-class Chef::Provider::Concurrent < Chef::Provider::LWRPBase
-  include Garcon::Helpers
+class Chef::Provider::Concurrent < Chef::Provider
+  include Garcon
 
-  # def initialize(new_resource, run_context)
-  #   super
-  #   action_start
-  # end
+  provides :concurrent, os: 'linux'
 
-  use_inline_resources if defined?(:use_inline_resources)
+  def initialize(new_resource, run_context)
+    super(new_resource, run_context)
+  end
 
   # Boolean indicating if WhyRun is supported by this provider.
   #
@@ -47,7 +46,7 @@ class Chef::Provider::Concurrent < Chef::Provider::LWRPBase
   #
   # @api private
   def load_current_resource
-    @current_resource ||= Chef::Resource::Concurrent.new(new_resource.name)
+    @current_resource = Chef::Resource::Concurrent.new(new_resource.name)
   end
 
   def action_start

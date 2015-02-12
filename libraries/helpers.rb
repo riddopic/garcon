@@ -3,9 +3,9 @@
 # Cookbook Name:: garcon
 # Libraries:: helpers
 #
-# Author: Stefano Harding <riddopic@gmail.com>
-#
-# Copyright (C) 2014-2015 Stefano Harding
+# Author:    Stefano Harding <riddopic@gmail.com>
+# License:   Apache License, Version 2.0
+# Copyright: (C) 2014-2015 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -135,19 +135,15 @@ module Garcon
         chef_gem('rubyzip') { action :nothing }.run_action(:install)
         Chef::Recipe.send(:require, 'zip')
         unless installed?('aria2c')
-          if platform_family?('rhel') && node[:platform_version].to_i == 7
-            Chef::Log.info shell_out!('rpm -Uvh http://bit.ly/1xWL2LX').stdout
-          else
-            begin
-              yum = Chef::Resource::YumRepository.new('garcon', run_context)
-              yum.mirrorlist node[:garcon][:repo][:mirrorlist]
-              yum.gpgcheck node[:garcon][:repo][:gpgcheck]
-              yum.gpgkey node[:garcon][:repo][:gpgkey]
-              yum.run_action(:create)
-              package('aria2') { action :nothing }.run_action(:install)
-            ensure
-              yum.run_action(:delete)
-            end
+          begin
+            yum = Chef::Resource::YumRepository.new('garcon', run_context)
+            yum.mirrorlist node[:garcon][:repo][:mirrorlist]
+            yum.gpgcheck node[:garcon][:repo][:gpgcheck]
+            yum.gpgkey node[:garcon][:repo][:gpgkey]
+            yum.run_action(:create)
+            package('aria2') { action :nothing }.run_action(:install)
+          ensure
+            yum.run_action(:delete)
           end
         end
       end
@@ -266,5 +262,34 @@ module Garcon
     Chef::Recipe.send(:include, Garcon::Helpers)
     Chef::Resource.send(:include, Garcon::Helpers)
     Chef::Provider.send(:include, Garcon::Helpers)
+  end
+end
+
+require "mixlib/log/formatter"
+
+module Mixlib
+  module Log
+    class Formatter < Logger::Formatter
+      def call(severity, time, progname, msg)
+        if @@show_time
+          reset = "\033[0m"
+          color = case severity
+          when "FATAL"
+            "\033[1;41m" # Bright Red
+          when "ERROR"
+            "\033[31m" # Red
+          when "WARN"
+            "\033[33m" # Yellow
+          when "DEBUG"
+            "\033[2;37m" # Faint Gray
+          else
+            reset # Normal
+          end
+          sprintf("[%s] #{color}%s#{reset}: %s\n", time.iso8601(), severity, msg2str(msg))
+        else
+          sprintf("%s: %s\n", severity, msg2str(msg))
+        end
+      end
+    end
   end
 end

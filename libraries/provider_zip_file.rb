@@ -3,9 +3,9 @@
 # Cookbook Name:: garcon
 # HWRP:: provider_zip_file
 #
-# Author: Stefano Harding <riddopic@gmail.com>
-#
-# Copyright (C) 2014-2015 Stefano Harding
+# Author:    Stefano Harding <riddopic@gmail.com>
+# License:   Apache License, Version 2.0
+# Copyright: (C) 2014-2015 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,12 +20,13 @@
 # limitations under the License.
 #
 
-class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
-  include Chef::Mixin::EnforceOwnershipAndPermissions
-  include Garcon::Helpers
-  require 'find'
+require 'find'
 
-  use_inline_resources if defined?(:use_inline_resources)
+class Chef::Provider::ZipFile < Chef::Provider
+  include Chef::Mixin::EnforceOwnershipAndPermissions
+  include Garcon
+
+  provides :zip_file, os: 'linux'
 
   # Boolean indicating if WhyRun is supported by this provider.
   #
@@ -42,15 +43,18 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
   #
   # @api private
   def load_current_resource
-    @current_resource ||= Chef::Resource::ZipFile.new(new_resource.name)
+    @current_resource = Chef::Resource::ZipFile.new(new_resource.name)
+    @current_resource
   end
 
-  action :unzip do
+  # Unzip method
+  #
+  def action_unzip
     monitor.synchronize do
-      converge_by "Unziping #{new_resource.source} to #{new_resource.path}" do
-        zip_file = cached_file(new_resource.source, new_resource.checksum)
+      converge_by "Unzip #{new_resource.source} to #{new_resource.path}" do
+        zipfile   = cached_file(new_resource.source, new_resource.checksum)
         overwrite = new_resource.overwrite
-        Zip::File.open(zip_file) do |zip|
+        Zip::File.open(zipfile) do |zip|
           zip.each do |entry|
             path = ::File.join(new_resource.path, entry.name)
             FileUtils.mkdir_p(::File.dirname(path))
@@ -60,21 +64,23 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
             zip.extract(entry, path)
           end
         end
-        ::File.unlink(zip_file) if new_resource.remove_after
         do_acl_changes
+        ::File.unlink(zipfile) if new_resource.remove_after
         new_resource.updated_by_last_action(true)
       end
     end
   end
 
-  action :zip do
+  # Zip mmethod
+  #
+  def action_zip
     monitor.synchronize do
       if ::File.exists?(new_resource.path) && !new_resource.overwrite
         Chef::Log.info "#{new_resource.path} already exists - nothing to do"
       else
         ::File.unlink(new_resource.path) if ::File.exists?(new_resource.path)
         if ::File.directory?(new_resource.source)
-          converge_by "Ziping #{new_resource.source} to #{new_resource.path}" do
+          converge_by "Zip #{new_resource.source} to #{new_resource.path}" do
             z = Zip::File.new(new_resource.path, true)
             Find.find(new_resource.source) do |f|
               next if f == new_resource.source
@@ -92,8 +98,19 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
     end
   end
 
+  # Implementation components *should* follow symlinks when managing access
+  # control (e.g., use chmod instead of lchmod even if the path we're
+  # managing is a symlink).
+  def manage_symlink_access?
+    false
+  end
+
   private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
 
+  # Change file ownership and mode
+  #
+  # @return [undefined]
+  # @api private
   def do_acl_changes
     if access_controls.requires_changes?
       converge_by(access_controls.describe_changes) do
@@ -108,7 +125,7 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
   # @param source [String, URI]
   #   source file path
   # @param checksum [String]
-  #   the sha-1 checksum of the file
+  #   the SHA-256 checksum of the file
   #
   # @return [String]
   #   path to the cached file
@@ -117,14 +134,16 @@ class Chef::Provider::ZipFile < Chef::Provider::LWRPBase
       file = ::File.basename(URI.unescape(URI.parse(src).path))
       cache_file_path = ::File.join(Chef::Config[:file_cache_path], file)
       Chef::Log.info "Caching file #{src} at #{cache_file_path}"
-      dl = Chef::Resource::Download.new(cache_file_path, run_context)
-      dl.source src
-      dl.checksum checksum if checksum
+      dl = Chef::Resource::Download.new(file, run_context)
+      dl.source     src
+      dl.backup     false
+      dl.checksum   checksum if checksum
+      dl.directory  Chef::Config[:file_cache_path]
+      dl.check_cert false # hack, hack, hack
       dl.run_action(:create)
     else
       cache_file_path = src
     end
-
     cache_file_path
   end
 end

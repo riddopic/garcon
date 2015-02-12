@@ -2,6 +2,8 @@ DEPENDENCIES
   garcon
     path: .
     metadata: true
+  test_fixtures
+    path: test/fixtures/cookbooks/test_fixtures
 
 GRAPH
   build-essential (2.1.3)
@@ -10,4 +12,7 @@ GRAPH
     build-essential (>= 2.1.3)
     chef_handler (>= 1.1.6)
     yum (>= 3.5.1)
+  test_fixtures (0.1.0)
+    chef_handler (>= 0.0.0)
+    garcon (>= 0.0.0)
   yum (3.5.2)
