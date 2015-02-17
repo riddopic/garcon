@@ -32,30 +32,32 @@ module Garcon
   #
   module Validations
     # Matches on a string.
-    STRING_VALID_REGEX = /\A[^\\\/\:\*\?\<\>\|]+\z/
+    string_valid_regex = /\A[^\\\/\:\*\?\<\>\|]+\z/
 
     # Matches on a file mode.
-    FILE_MODE_VALID_REGEX = /^0?\d{3,4}$/
+    file_mode_valid_regex = /^0?\d{3,4}$/
 
     # Matches on a MD5/SHA-1/256 checksum.
-    CHECKSUM_VALID_REGEX = /^[0-9a-f]{32}$|^[a-zA-Z0-9]{40,64}$/
+    checksum_valid_regex = /^[0-9a-f]{32}$|^[a-zA-Z0-9]{40,64}$/
 
     # Matches on a URL/URI with a archive file link.
-    URL_ARCH_VALID_REGEX = /^(file|http|https?):\/\/.*(gz|tar.gz|tgz|bin|zip)$/
+    url_arch_valid_regex = /^(file|http|https?):\/\/.*(gz|tar.gz|tgz|bin|zip)$/
 
     # Matches on a FQDN like name (does not validate FQDN).
-    FQDN_VALID_REGEX = /^(?:(?:[0-9a-zA-Z_\-]+)\.){2,}(?:[0-9a-zA-Z_\-]+)$/
+    fqdn_valid_regex = /^(?:(?:[0-9a-zA-Z_\-]+)\.){2,}(?:[0-9a-zA-Z_\-]+)$/
 
     # Matches on a valid IPV4 address.
-    IPV4_VALID_REGEX = /\b(25[0-5]|2[0-4]\d|1\d\d|
+    ipv4_valid_regex = /\b(25[0-5]|2[0-4]\d|1\d\d|
                         [1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}\b/
 
     # Matches on port ranges 0 to 1023.
-    VALID_PORTS_REGEX = /^(102[0-3]|10[0-1]\d|[1-9][0-9]{0,2}|0)$/
+    valid_ports_regex = /^(102[0-3]|10[0-1]\d|[1-9][0-9]{0,2}|0)$/
 
     # Matches on any port from 0 to 65_535.
-    PORTS_ALL_VALID_REGEX = /^(6553[0-5]|655[0-2]\d|65[0-4]\d\d|6[0-4]\d{3}|
+    ports_all_valid_regex = /^(6553[0-5]|655[0-2]\d|65[0-4]\d\d|6[0-4]\d{3}|
                              [1-5]\d{4}|[1-9]\d{0,3}|0)$/
+
+
     class << self
       # Helper method to validate port numbers
       #

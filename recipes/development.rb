@@ -21,11 +21,9 @@
 #
 
 # For cookbook development only...
-chef_gem('hoodie')        { action :nothing }.run_action(:install)
 chef_gem('awesome_print') { action :nothing }.run_action(:install)
 chef_gem('pry')           { action :nothing }.run_action(:install)
 
-require 'hoodie'         unless defined?(Hoodie)
 require 'hoodie/logging' unless defined?(Hoodie::Logging)
 require 'pry'
 require 'ap'
