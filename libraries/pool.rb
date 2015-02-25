@@ -31,8 +31,8 @@ class Thread::Pool
 	# A task incapsulates a block being ran by the pool and the arguments to pass
 	# to it.
 	class Task
-		Timeout = Class.new(Exception)
-		Asked   = Class.new(Exception)
+    class Timeout < RuntimeError; end
+    class Asked   < RuntimeError; end
 
 		attr_reader :pool, :timeout, :exception, :thread, :started_at
 

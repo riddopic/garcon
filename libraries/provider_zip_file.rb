@@ -28,6 +28,11 @@ class Chef::Provider::ZipFile < Chef::Provider
 
   provides :zip_file, os: 'linux'
 
+  def initialize(new_resource, run_context)
+    super
+    do_prerequisite unless installed?('aria2c')
+  end
+
   # Boolean indicating if WhyRun is supported by this provider.
   #
   # @return [TrueClass, FalseClass]
@@ -119,6 +124,15 @@ class Chef::Provider::ZipFile < Chef::Provider
     end
   end
 
+  # Ensure all prerequisite software is installed.
+  #
+  # @return [undefined]
+  # @api private
+  def do_prerequisite
+    chef_gem('rubyzip') { action :nothing }.run_action(:install)
+    Chef::Recipe.send(:require, 'zip')
+  end
+
   # Cache a file locally in `Chef::Config[:file_cache_path]`.
   # @note The file is gargbage collected at the end of a run.
   #
@@ -129,6 +143,8 @@ class Chef::Provider::ZipFile < Chef::Provider
   #
   # @return [String]
   #   path to the cached file
+  #
+  # @api private
   def cached_file(src, checksum = nil)
     if src =~ URI::ABS_URI && %w[ftp http https].include?(URI.parse(src).scheme)
       file = ::File.basename(URI.unescape(URI.parse(src).path))
@@ -139,7 +155,8 @@ class Chef::Provider::ZipFile < Chef::Provider
       dl.backup     false
       dl.checksum   checksum if checksum
       dl.directory  Chef::Config[:file_cache_path]
-      dl.check_cert false # hack, hack, hack
+      dl.check_cert false
+      dl.header     new_resource.header if new_resource.header
       dl.run_action(:create)
     else
       cache_file_path = src

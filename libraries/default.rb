@@ -20,21 +20,25 @@
 # limitations under the License.
 #
 
-require_relative 'extenterator'
 require_relative 'cli_helpers'
+require_relative 'validations'
+require_relative 'zen_master'
 
+# Include hooks to extend with class and instance methods.
+#
 module Garcon
   # Include hooks to extend Resource with class and instance methods.
   #
   module Resource
-    include LazyAttrs
-    include HappyDefaults
-    include Extenterator
+    include Validations
     include CliHelpers
+    include ZenMaster
   end
 
+  # Include hooks to extend Provider with class and instance methods.
+  #
   module Provider
-    include Extenterator
+    include ZenMaster
   end
 
   # Extends a descendant with class and instance methods

@@ -154,9 +154,12 @@ class Chef::Provider::Download < Chef::Provider
   # @api private
   def do_download
     checksum = if new_resource.checksum
-      new_resource._?(:checksum, '--checksum=sha-256=').gsub(/\s+/, '')
+      new_resource._?(:checksum, '--checksum=sha-256=').join
     end
-    aria2c(checksum,
+    header = if new_resource.header
+      "--header='#{new_resource._?(:header)[1]}'"
+    end
+    aria2c(checksum, header,
       new_resource._?(:path,        '-o'),
       new_resource._?(:directory,   '-d'),
       new_resource._?(:split_size,  '-s'),
@@ -165,6 +168,10 @@ class Chef::Provider::Download < Chef::Provider
       new_resource.source)
   end
 
+  # Ensure all prerequisite software is installed.
+  #
+  # @return [undefined]
+  # @api private
   def do_prerequisite
     package('gnutls')   { action :nothing }.run_action(:install)
     chef_gem('rubyzip') { action :nothing }.run_action(:install)

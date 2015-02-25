@@ -98,6 +98,73 @@ module Garcon
       end
     end
 
+    # Throws water in the face of a lazy attribute, returns the unlazy value,
+    # good for nothing long-haird hippy
+    #
+    # @param [Chef::DelayedEvaluator, Proc] var
+    # @return [String]
+    # @api private
+    def lazy_eval(var)
+      if var && var.is_a?(Chef::DelayedEvaluator)
+        var = var.dup
+        var = instance_eval(&var.call)
+      end
+      var
+    rescue
+      var.call
+    end
+
+    # Runs a code block, and retries it when an exception occurs. Should the
+    # number of retries be reached without success, the last exception will be
+    # raised.
+    #
+    # @param opts [Hash{Symbol => Value}]
+    # @option opts [Fixnum] :tries
+    #   number of attempts to retry before raising the last exception
+    # @option opts [Fixnum] :sleep
+    #   number of seconds to wait between retries, use lambda to exponentially
+    #   increasing delay between retries
+    # @option opts [Array(Exception)] :on
+    #   the type of exception(s) to catch and retry on
+    # @option opts [Regex] :matching
+    #   match based on the exception message
+    # @option opts [Block] :ensure
+    #   ensure a block of code is executed, regardless of whether an exception
+    #   is raised
+    #
+    # @return [Block]
+    #
+    # @api public
+    def retrier(options = {}, &_block)
+      tries  = options.fetch(:tries,  4)
+      wait   = options.fetch(:sleep,  1)
+      on     = options.fetch(:on,     StandardError)
+      match  = options.fetch(:match,  /.*/)
+      insure = options.fetch(:insure, proc {})
+
+      retries = 0
+      retry_exception = nil
+
+      begin
+        yield retries, retry_exception
+      rescue *[on] => exception
+        raise unless exception.message =~ match
+        raise if retries + 1 >= tries
+
+        # Interrupt Exception could be raised while sleeping
+        begin
+          sleep wait.respond_to?(:call) ? wait.call(retries) : wait
+        rescue *[on]
+        end
+
+        retries += 1
+        retry_exception = exception
+        retry
+      ensure
+        insure.call(retries)
+      end
+    end
+
     # Retrieve the version number of the cookbook in the run list.
     #
     # @param name [String]
@@ -124,7 +191,7 @@ module Garcon
     end
 
     def monitor
-      @@monitor ||= Monitor.new
+      @monitor ||= Monitor.new
     end
 
     # Helper method to get Aria2 installed, enables the yum repo, installs then
@@ -149,9 +216,25 @@ module Garcon
       end
     end
 
+    # Creates a temp directory executing the block provided. When done the
+    # temp directory and all it's contents are garbage collected.
+    #
+    # @param block [Block]
+    #
+    # @api public
+    def with_tmp_dir(&block)
+      Dir.mktmpdir(SecureRandom.hex(3)) do |tmp_dir|
+        Dir.chdir(tmp_dir, &block)
+      end
+    end
+
+    def file_cache_path
+      Chef::Config[:file_cache_path]
+    end
+
     def count
-      @@count ||= 0
-      @@count += 1
+      @count ||= 0
+      @count += 1
     end
 
     def announce(msg = nil)
@@ -230,7 +313,9 @@ module Garcon
         super("Method '#{method}' needs to be implemented")
       end
     end
-    class InvalidPort < ArgumentError; end
+
+    class ValidationError < RuntimeError;    end
+    class InvalidPort     < ValidationError; end
   end
 
   unless Chef::Recipe.ancestors.include?(Garcon::Helpers)
@@ -240,7 +325,7 @@ module Garcon
   end
 end
 
-require "mixlib/log/formatter"
+require 'mixlib/log/formatter'
 
 module Mixlib
   module Log
@@ -249,20 +334,21 @@ module Mixlib
         if @@show_time
           reset = "\033[0m"
           color = case severity
-          when "FATAL"
+          when 'FATAL'
             "\033[1;41m" # Bright Red
-          when "ERROR"
-            "\033[31m" # Red
-          when "WARN"
-            "\033[33m" # Yellow
-          when "DEBUG"
+          when 'ERROR'
+            "\033[31m"   # Red
+          when 'WARN'
+            "\033[33m"   # Yellow
+          when 'DEBUG'
             "\033[2;37m" # Faint Gray
           else
-            reset # Normal
+            reset        # Normal
           end
-          sprintf("[%s] #{color}%s#{reset}: %s\n", time.iso8601(), severity, msg2str(msg))
+          sprintf "[%s] #{color}%s#{reset}: %s\n",
+                  time.iso8601, severity, msg2str(msg)
         else
-          sprintf("%s: %s\n", severity, msg2str(msg))
+          sprintf "%s: %s\n", severity, msg2str(msg)
         end
       end
     end

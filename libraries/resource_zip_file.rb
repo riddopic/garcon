@@ -157,6 +157,14 @@ class Chef::Resource::ZipFile < Chef::Resource
   attribute :check_cert,
             kind_of: [TrueClass, FalseClass]
 
+  # Append HEADER to HTTP request header.
+  #
+  # @param [String] header
+  # @return [String]
+  # @api public
+  attribute :header,
+            kind_of: String
+
   # The location (URI) of the source file. This value may also specify HTTP
   # (http://), FTP (ftp://), or local (file://) source file locations.
   #
@@ -165,28 +173,6 @@ class Chef::Resource::ZipFile < Chef::Resource
   # @api public
   attribute :source,
             kind_of: [String, URI::HTTP],
-            callbacks: { validate_source: ->(source) {
-              Chef::Resource::ZipFile.validate_source(source) }},
+            callbacks: { source: ->(source) { validate_source(source) }},
             required: true
-
-  private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
-
-  def self.validate_source(source)
-    source = Array(source).flatten
-    raise ArgumentError, "#{resource_name} has an empty source" if source.empty?
-    source.each do |src|
-      unless absolute_uri?(src)
-        raise Exceptions::InvalidRemoteFileURI, "#{src.inspect} is not a "  \
-          "valid source parameter for #{resource_name}. source must be an " \
-          "absolute URI or an array of URIs."
-      end
-    end
-    true
-  end
-
-  def self.absolute_uri?(source)
-    source.kind_of?(String) and URI.parse(source).absolute?
-  rescue URI::InvalidURIError
-    false
-  end
 end

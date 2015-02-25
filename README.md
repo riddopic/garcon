@@ -226,7 +226,7 @@ github.com/opscode-cookbooks.
       url '//example.com/file.png'
       action :head
       if ::File.exists?('/tmp/file.png')
-        headers "If-Modified-Since" => ::File.mtime("/tmp/file.png").httpdate
+        header "If-Modified-Since" => ::File.mtime("/tmp/file.png").httpdate
       end
       notifies :create, 'download[http://example.com/file.png]', :immediately
     end
