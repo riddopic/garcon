@@ -44,9 +44,7 @@ class Chef::Provider::HouseKeeping < Chef::Provider
 
   # Load and return the current resource
   #
-  # @return [Chef::Resource::RepositoryAuth]
-  #
-  # @raise [Odsee::Exceptions::ResourceNotFound]
+  # @return [Chef::Provider::HouseKeeping]
   #
   # @api private
   def load_current_resource

@@ -33,15 +33,64 @@ module Garcon
       end
     end
 
-    class TimeoutError            < StandardError; end
-    class InvalidStateError       < StandardError; end
-    class InvalidTransitionError  < StandardError; end
-    class InvalidCallbackError    < StandardError; end
-    class TransitionFailedError   < StandardError; end
-    class TransitionConflictError < StandardError; end
-    class GuardFailedError        < StandardError; end
-    class FileNotFound            < RuntimeError;  end
-    class DirectoryNotFound       < RuntimeError;  end
-    class ValidationError         < RuntimeError;  end
+    class ValidationError < RuntimeError
+      attr_accessor :value, :type
+
+      def initialize(value, type = nil)
+        @value, @type = value, type
+        super(build_message)
+        super(detail)
+      end
+
+      def build_message
+        if type?
+          "#{value} is not a valid #{type}"
+        else
+          "Failed to validate #{value.inspect}"
+        end
+      end
+
+      def type?
+        type.nil? ? false : true
+      end
+
+      # Pretty string output of exception/error object useful for helpful
+      # debug messages.
+      #
+      def detail
+        if backtrace
+          %{#{self.class.name}: #{message}\n  #{backtrace.join("\n  ")}\n  LOGGED FROM: #{caller[0]}}
+        else
+          %{#{self.class.name}: #{message}\n  LOGGED FROM: #{caller[0]}}
+        end
+      end
+    end
+
+    # Raised when errors occur during configuration.
+    ConfigurationError             = Class.new(StandardError)
+
+    # Raised when an object's methods are called when it has not been
+    # properly initialized.
+    InitializationError            = Class.new(StandardError)
+
+    # Raised when an operation times out.
+    TimeoutError                   = Class.new(RuntimeError)
+    PollingError                   = Class.new(RuntimeError)
+
+    # Raised when node[:garcon][:databag_type] is not valid.
+    InvalidDataBagTypeError        = Class.new(RuntimeError)
+
+    # Raised when cipher direction is invalid.
+    InvalidCipherError             = Class.new(RuntimeError)
+
+    # Raised when no encryption key password is specified.
+    MissingEncryptionPasswordError = Class.new(RuntimeError)
+    ResourceNotFoundError          = Class.new(RuntimeError)
+    InvalidStateError              = Class.new(RuntimeError)
+    InvalidTransitionError         = Class.new(RuntimeError)
+    InvalidCallbackError           = Class.new(RuntimeError)
+    TransitionFailedError          = Class.new(RuntimeError)
+    TransitionConflictError        = Class.new(RuntimeError)
+    GuardFailedError               = Class.new(RuntimeError)
   end
 end

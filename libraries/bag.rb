@@ -20,6 +20,8 @@
 # limitations under the License.
 #
 
+require_relative 'exceptions'
+
 module Garcon
   # Library routine that returns an encrypted data bag value for a supplied
   # string. The key used in decrypting the encrypted value should be located at
@@ -49,6 +51,8 @@ module Garcon
   #
   module Bag
     module ClassMethods
+      include Garcon::Exceptions
+
       def secret(bag_name, index)
         if node[:garcon][:devmode]
           dev_secret(index)
@@ -61,7 +65,7 @@ module Garcon
           when :vault
             vault_secret('vault_' + bag_name, index)
           else
-            raise "Unsupported value `#{node[:garcon][:databag_type]}`"
+            raise InvalidDataBagType
           end
         end
       end

@@ -56,7 +56,7 @@ module Garcon
         def validate_host(host)
           IPSocket.getaddress(host)
         rescue
-          raise ValidationError
+          raise ValidationError.new host
         end
 
         # Validate that the path specified is a file or directory, will raise
@@ -71,7 +71,7 @@ module Garcon
         def validate_path(path, is_a = :file)
           file, dir = ::File.exist?(path), Dir.exist?(path)
           unless is_a == :file ? file : is_a == :dir ? dir : nil
-            raise ValidationError, "#{path} is not a valid #{is_a}"
+            raise ValidationError.new path, is_a
           end
         end
 
@@ -85,7 +85,7 @@ module Garcon
         def validate_source(source)
           Array(source).flatten.each do |src|
             unless ::File.exist?(src) || absolute_uri?(src)
-              raise ValidationError, "Invalid source #{src.inspect}"
+              raise ValidationError.new src
             end
           end
           true

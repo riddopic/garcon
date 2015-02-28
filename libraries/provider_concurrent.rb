@@ -42,7 +42,7 @@ class Chef::Provider::Concurrent < Chef::Provider
 
   # Load and return the current resource.
   #
-  # @return [Chef::Provider::Dsccsetup]
+  # @return [Chef::Provider::Concurrent]
   #
   # @api private
   def load_current_resource

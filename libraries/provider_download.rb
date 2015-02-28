@@ -56,7 +56,7 @@ class Chef::Provider::Download < Chef::Provider
 
   # Load and return the current resource.
   #
-  # @return [Chef::Resource::LdapEntry]
+  # @return [Chef::Provider::Download]
   #
   # @api private
   def load_current_resource

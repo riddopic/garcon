@@ -229,13 +229,11 @@ module Garcon
     # @yield a block that determines whether polling should continue
     # @yield return false if polling should continue
     # @yield return true if polling is complete
-    # @raise [RuntimeError] when polling fails
+    # @raise [Garcon::PollingError] when polling fails
     # @return the return value of the passed block
     # @since 1.0.0
-    def poll(msg = nil, seconds = nil)
-      seconds ||= 8
-      delay   ||= 0.1
-      try_until = Time.now + seconds
+    def poll(wait = 8, delay = 0.1)
+      try_until = Time.now + wait
       failure   = nil
 
       while Time.now < try_until do
@@ -243,8 +241,7 @@ module Garcon
         return result if result
         sleep delay
       end
-      msg ||= "polling failed after #{seconds} seconds"
-      raise msg
+      raise TimeoutError
     end
     module_function :poll
 
@@ -254,7 +251,7 @@ module Garcon
     #
     # @example
     #   def wait_for_server
-    #     poll('they must be sleeping', 20) do
+    #     poll(20) do
     #       begin
     #         TCPSocket.new(SERVER_IP, SERVER_PORT)
     #         true
@@ -275,10 +272,8 @@ module Garcon
     # @return the value of the passed block
     # @since 1.2.0
     #
-    def patiently(seconds = nil, delay = nil)
-      seconds ||= 8
-      delay   ||= 0.1
-      try_until = Time.now + seconds
+    def patiently(wait = 8, delay = 0.1)
+      try_until = Time.now + wait
       failure   = nil
 
       while Time.now < try_until do
@@ -292,6 +287,26 @@ module Garcon
       raise failure if failure
     end
     module_function :patiently
+
+    # Wait the given number of seconds for the block operation to complete.
+    #
+    # @param [Integer] seconds
+    #   number of seconds to wait
+    #
+    # @return [Object]
+    #   result of the block operation
+    #
+    # @raise [Garcon::TimeoutError]
+    #   when the block operation does not complete in the alloted time
+    #
+    # @api private
+    def timeout(seconds)
+      thread = Thread.new { Thread.current[:result] = yield }
+      thread.join(seconds) ? return thread[:result] : raise TimeoutError
+    ensure
+      Thread.kill(thread) unless thread.nil?
+    end
+    module_function :timeout
 
     # Retrieve the version number of the cookbook in the run list.
     #
@@ -435,26 +450,6 @@ module Garcon
         url
       end
     end
-
-    # Wait the given number of seconds for the block operation to complete.
-    #
-    # @param [Integer] seconds
-    #   number of seconds to wait
-    #
-    # @return [Object]
-    #   result of the block operation
-    #
-    # @raise [Garcon::TimeoutError]
-    #   when the block operation does not complete in the alloted time
-    #
-    # @api private
-    def timeout(seconds)
-      thread = Thread.new { Thread.current[:result] = yield }
-      thread.join(seconds) ? return thread[:result] : raise TimeoutError
-    ensure
-      Thread.kill(thread) unless thread.nil?
-    end
-    module_function :timeout
   end
 
   unless Chef::Recipe.ancestors.include?(Garcon::Helpers)

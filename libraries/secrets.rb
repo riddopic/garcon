@@ -285,7 +285,7 @@ module Garcon
       when :decrypt
         cipher.decrypt
       else
-        raise "Bad cipher direction #{direction}"
+        raise InvalidCipher
       end
       cipher.key = encrypt_key(passwd, options)
       cipher
@@ -310,7 +310,7 @@ module Garcon
     # @api private
     def encrypt_key(passwd, _options = {})
       passwd = passwd.to_s
-      raise 'Missing encryption password!' if passwd.empty?
+      raise MissingEncryptionPasswordError if passwd.empty?
       Digest::SHA256.digest(passwd)
     end
   end
