@@ -67,7 +67,6 @@ class Chef::Provider::Concurrent < Chef::Provider
     if @@pool.shutdown?
       Chef::Log.info "#{new_resource} already shutdown - nothing to do."
     else
-      banner 'Concurrent thread-pool shutdown...'
       converge_by "Concurrent pool #{new_resource} is being shutdown" do
         @@pool.shutdown
         Chef::Log.info "Pool #{new_resource} shutdown complete."
@@ -78,7 +77,6 @@ class Chef::Provider::Concurrent < Chef::Provider
   def action_run
     @@pool.process do
       job = job_num
-      banner "Job ID: #{job} ~ #{@@pool.waiting} x #{@@pool.spawned}"
       converge_by "#{job}: Concurrent converge for #{new_resource.name}" do
         begin
           saved_run_context = @run_context
@@ -96,7 +94,6 @@ class Chef::Provider::Concurrent < Chef::Provider
           end
         end
       end
-      banner "Job ID: #{job} ~ #{@@pool.waiting} x #{@@pool.spawned}", :yellow
       Chef::Log.info "#{job}: Completed converge for #{new_resource.name}"
     end
   end

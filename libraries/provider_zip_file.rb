@@ -30,7 +30,7 @@ class Chef::Provider::ZipFile < Chef::Provider
 
   def initialize(new_resource, run_context)
     super
-    do_prerequisite unless installed?('aria2c')
+    do_prerequisite unless defined?(Zip)
   end
 
   # Boolean indicating if WhyRun is supported by this provider.
@@ -129,7 +129,7 @@ class Chef::Provider::ZipFile < Chef::Provider
   # @return [undefined]
   # @api private
   def do_prerequisite
-    chef_gem('rubyzip') { action :nothing }.run_action(:install)
+    chef_gem 'rubyzip'
     Chef::Recipe.send(:require, 'zip')
   end
 
@@ -149,6 +149,7 @@ class Chef::Provider::ZipFile < Chef::Provider
     if src =~ URI::ABS_URI && %w[ftp http https].include?(URI.parse(src).scheme)
       file = ::File.basename(URI.unescape(URI.parse(src).path))
       cache_file_path = ::File.join(Chef::Config[:file_cache_path], file)
+
       Chef::Log.info "Caching file #{src} at #{cache_file_path}"
       dl = Chef::Resource::Download.new(file, run_context)
       dl.source     src
@@ -158,6 +159,16 @@ class Chef::Provider::ZipFile < Chef::Provider
       dl.check_cert false
       dl.header     new_resource.header if new_resource.header
       dl.run_action(:create)
+
+      # download file do
+      #   source      src
+      #   backup      false
+      #   checksum    checksum if checksum
+      #   directory   Chef::Config[:file_cache_path]
+      #   check_cert  false
+      #   header      new_resource.header if new_resource.header
+      #   action     :create
+      # end
     else
       cache_file_path = src
     end

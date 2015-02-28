@@ -24,6 +24,7 @@ require 'ipaddr'
 require 'openssl'
 require 'base64'
 require 'securerandom'
+require_relative 'exceptions'
 
 # Resource validations.
 #
@@ -31,15 +32,7 @@ module Garcon
   module Resource
     module Validations
       module ClassMethods
-        # Helper method to validate port numbers
-        #
-        # @yield [Integer]
-        # @return [Trueclass]
-        # @raise [ValidationError]
-        # @api private
-        def port?
-          ->(port) { validate_port(port) }
-        end
+        include Garcon::Exceptions
 
         # Boolean, true if port number is within range, otherwise raises a
         # Exceptions::InvalidPort
@@ -50,21 +43,11 @@ module Garcon
         # @raise [ValidationError]
         # @api private
         def valid_port?(port, range = 0..65_535)
-          (range === port) ? true : (raise InvalidPort.new port, range)
+          (range === port) ? true : (raise ValidationError.new port, range)
         end
 
-        # Helper method to validate host name
-        #
-        # @yield [Integer]
-        # @return [Trueclass]
-        # @raise [ValidationError]
-        # @api private
-        def host?
-          ->(_host) { validate_host(name) }
-        end
-
-        # Validate the hostname, returns the IP address if valid, otherwise raises
-        # Exceptions::InvalidHost
+        # Validate the hostname, returns the IP address if valid, otherwise
+        # raises Exceptions::InvalidHost
         #
         # @param [String] host
         # @return [Integer]
@@ -73,39 +56,22 @@ module Garcon
         def validate_host(host)
           IPSocket.getaddress(host)
         rescue
-          raise InvalidHost.new host
-        end
-
-        # Helper method to validate file path
-        #
-        # @yield [Integer]
-        # @return [Trueclass]
-        # @raise [ValidationError]
-        # @api private
-        def path?
-          ->(_path) { validate_filepath(file) }
-        end
-
-        # Helper method to validate file
-        #
-        # @yield [Integer]
-        # @return [Trueclass]
-        # @raise [ValidationError]
-        # @api private
-        def file?
-          ->(file) { validate_file(file) }
+          raise ValidationError
         end
 
         # Validate that the path specified is a file or directory, will raise
         # Exceptions::InvalidFilePath if not
         #
         # @param [String] path
+        # @param [Symbol] id_a
+        #   the type to validate, valid types are `:file` or `:dir`
         # @return [TrueClass]
         # @raise [ValidationError]
         # @api private
-        def validate_filepath?(path)
-          unless ::File.exist?(path) || ::File.directory?(path)
-            raise PathNotFound.new path
+        def validate_path(path, is_a = :file)
+          file, dir = ::File.exist?(path), Dir.exist?(path)
+          unless is_a == :file ? file : is_a == :dir ? dir : nil
+            raise ValidationError, "#{path} is not a valid #{is_a}"
           end
         end
 
@@ -117,12 +83,9 @@ module Garcon
         # @raise [ValidationError]
         # @api private
         def validate_source(source)
-          source = Array(source).flatten
-          raise ValidationError, 'Source attribute is required' if source.empty?
-          source.each do |src|
+          Array(source).flatten.each do |src|
             unless ::File.exist?(src) || absolute_uri?(src)
-              raise ValidationError,
-                "Invalid source '#{src.inspect}' parameter for #{resource_name}"
+              raise ValidationError, "Invalid source #{src.inspect}"
             end
           end
           true

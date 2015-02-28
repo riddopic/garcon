@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
 # Cookbook Name:: garcon
-# Recipe:: default
+# Recipe:: development
 #
 # Author: Stefano Harding <riddopic@gmail.com>
 #
@@ -20,16 +20,31 @@
 # limitations under the License.
 #
 
-# For cookbook development only...
-chef_gem('awesome_print') { action :nothing }.run_action(:install)
-chef_gem('pry')           { action :nothing }.run_action(:install)
+#  T H I S   R E C I P E   I S   F O R   D E V E L O P M E N T   O N L Y !
 
-require 'hoodie/logging' unless defined?(Hoodie::Logging)
-require 'pry'
-require 'ap'
+include_recipe 'chef_handler'
 
-Chef::Recipe.send(:include,   Hoodie::Logging)
-Chef::Resource.send(:include, Hoodie::Logging)
-Chef::Provider.send(:include, Hoodie::Logging)
+reporter = ::File.join(node[:chef_handler][:handler_path], 'devreporter.rb')
 
-Hoodie.config { |c| c.logging = true }
+cookbook_file reporter do
+  owner  'root'
+  group  'root'
+  mode    00600
+  action :create
+end
+
+chef_handler 'DevReporter' do
+  source   reporter
+  supports report: true
+  action  :enable
+end
+
+if node[:garcon][:civilize][:ruby] && !defined?(Pry)
+  chef_gem 'pry'
+  Chef::Recipe.send(:require, 'pry')
+end
+
+if node[:garcon][:civilize][:ruby] && !defined?(AwesomePrint)
+  chef_gem 'awesome_print'
+  Chef::Recipe.send(:require, 'ap')
+end

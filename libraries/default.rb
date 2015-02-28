@@ -20,9 +20,9 @@
 # limitations under the License.
 #
 
-require_relative 'cli_helpers'
 require_relative 'validations'
 require_relative 'zen_master'
+require_relative 'exceptions'
 
 # Include hooks to extend with class and instance methods.
 #
@@ -31,7 +31,6 @@ module Garcon
   #
   module Resource
     include Validations
-    include CliHelpers
     include ZenMaster
   end
 
@@ -39,6 +38,17 @@ module Garcon
   #
   module Provider
     include ZenMaster
+  end
+
+  def require_hoodie
+    unless defined?(Hoodie)
+      single_include 'build-essential::default'
+      chef_gem 'hoodie'
+      Chef::Recipe.send(:require, 'hoodie')
+      Chef::Recipe.send(:include,   Hoodie)
+      Chef::Resource.send(:include, Hoodie)
+      Chef::Provider.send(:include, Hoodie)
+    end
   end
 
   # Extends a descendant with class and instance methods
@@ -50,8 +60,12 @@ module Garcon
   # @api private
   def self.included(descendant)
     super
+
+    descendant.class_exec { include Garcon::Exceptions }
+
     if descendant < Chef::Resource
       descendant.class_exec { include Garcon::Resource }
+
     elsif descendant < Chef::Provider
       descendant.class_exec { include Garcon::Provider }
     end

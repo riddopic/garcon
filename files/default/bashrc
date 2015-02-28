@@ -1,0 +1,17 @@
+# .bashrc
+
+# User specific aliases and functions
+
+alias   h='history'
+alias  ls='ls -GFh --color'
+alias  du='du -h'
+alias  df='df -h'
+alias cls='clear'
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+	. /etc/bashrc
+fi
+
+set -o vi
+export EDITOR=vi

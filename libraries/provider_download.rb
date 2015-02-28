@@ -43,6 +43,17 @@ class Chef::Provider::Download < Chef::Provider
     true
   end
 
+  # Reload the resource state when something changes
+  #
+  # @return [undefined]
+  #
+  # @api private
+  def load_new_resource_state
+    if new_resource.exist.nil?
+      new_resource.exist(@current_resource.exist)
+    end
+  end
+
   # Load and return the current resource.
   #
   # @return [Chef::Resource::LdapEntry]
@@ -51,23 +62,26 @@ class Chef::Provider::Download < Chef::Provider
   def load_current_resource
     @current_resource = Chef::Resource::Download.new(new_resource.name)
     @current_resource.path(new_resource.path)
-    if (@current_resource.exists = ::File.exist?(@current_resource.path))
+
+    if ::File.exist?(@current_resource.path)
       @current_resource.checksum(checksum(@current_resource.path))
-      load_resource_attributes_from_file(@current_resource)
-    else
-      @current_resource.checksum(nil)
+      @current_resource.exist(@current_resource.checksum == new_resource.checksum)
     end
     @current_resource
   end
 
+  # Download the file
+  #
   def action_create
-    if exists_with_valid_checksum? && !access_controls.requires_changes?
-      Chef::Log.info "#{new_resource.path} already exists - nothing to do"
-    elsif exists_with_valid_checksum? && access_controls.requires_changes?
+    if @current_resource.exist && !access_controls.requires_changes?
+      Chef::Log.debug "#{new_resource.path} already exists - nothing to do"
+
+    elsif @current_resource.exist && access_controls.requires_changes?
       converge_by(access_controls.describe_changes) do
         access_controls.set_all
       end
       new_resource.updated_by_last_action(true)
+
     else
       converge_by "Download #{new_resource.source} to #{new_resource.path}" do
         backup unless ::File.symlink?(new_resource.path)
@@ -81,7 +95,7 @@ class Chef::Provider::Download < Chef::Provider
   alias_method :action_create_if_missing, :action_create
 
   def action_delete
-    if @current_resource.exists?
+    if @current_resource.exist?
       converge_by "Delete #{new_resource.path}" do
         backup unless ::File.symlink?(new_resource.path)
         ::File.delete(new_resource.path)
@@ -93,7 +107,7 @@ class Chef::Provider::Download < Chef::Provider
   end
 
   def action_touch
-    if @current_resource.exists?
+    if @current_resource.exist?
       converge_by "Update utime on #{new_resource.path}" do
         time = Time.now
         ::File.utime(time, time, new_resource.path)
@@ -112,16 +126,6 @@ class Chef::Provider::Download < Chef::Provider
   end
 
   private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
-
-  # Boolean, returns true if the resource exists and a checksum was supplied and
-  # the supplied checksum is a match for the resource checksum, otherwise false
-  #
-  # @return [TrueClass, FalseClass]
-  # @api private
-  def exists_with_valid_checksum?
-    (@current_resource.exists? && !new_resource.checksum.nil?) &&
-    (@current_resource.checksum == new_resource.checksum)
-  end
 
   # Change file ownership and mode
   #
@@ -159,7 +163,7 @@ class Chef::Provider::Download < Chef::Provider
     header = if new_resource.header
       "--header='#{new_resource._?(:header)[1]}'"
     end
-    aria2c(checksum, header,
+    aria2(checksum, header,
       new_resource._?(:path,        '-o'),
       new_resource._?(:directory,   '-d'),
       new_resource._?(:split_size,  '-s'),
@@ -190,7 +194,7 @@ class Chef::Provider::Download < Chef::Provider
     end
   end
 
-  # Command line executioner for running aria2c
+  # Command line executioner for running aria2
   #
   # @param [String, Array] args
   #   Any additional arguments and/or operand
@@ -206,10 +210,28 @@ class Chef::Provider::Download < Chef::Provider
   #   When the command does not complete within timeout (default: 60s)
   #
   # @api private
-  [:aria2c].each do |cmd|
-    define_method(cmd) do |*args|
-      (run ||= []) << which(cmd.to_s) << args
-      Chef::Log.info shell_out!(run.flatten.join(' ')).stdout
+  def aria2(*args)
+    retrier(tries: 10, sleep: ->(n) { 4**n }) { installed?('aria2') }
+    run = [which('aria2c')] << args.flatten.join(' ')
+    Chef::Log.info shell_out!(run.flatten.join(' ')).stdout
+  end
+
+  # Ensure all prerequisite software is installed.
+  #
+  # @return [undefined]
+  # @api private
+  def new____do_prerequisite
+    yum_repository 'garcon' do
+      mirrorlist    node[:garcon][:repo][:mirrorlist]
+      gpgcheck      node[:garcon][:repo][:gpgcheck]
+      gpgkey        node[:garcon][:repo][:gpgkey]
+      not_if      { installed?('aria2c') }
+      action       :create
+    end
+
+    package 'aria2c' do
+      notifies :delete, 'yum_repository[garcon]', :immediately
+      action   :install
     end
   end
 

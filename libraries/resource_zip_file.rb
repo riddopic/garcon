@@ -173,6 +173,5 @@ class Chef::Resource::ZipFile < Chef::Resource
   # @api public
   attribute :source,
             kind_of: [String, URI::HTTP],
-            callbacks: { source: ->(source) { validate_source(source) }},
             required: true
 end

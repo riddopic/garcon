@@ -20,8 +20,8 @@
 # limitations under the License.
 #
 
-default[:garcon][:repo][:gpgcheck] = true
-default[:garcon][:repo][:gpgkey] = 'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
+default[:garcon][:repo][:gpgcheck]   = true
+default[:garcon][:repo][:gpgkey]     = 'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
 default[:garcon][:repo][:mirrorlist] = case platform_version.to_i
 when 5
   'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
@@ -30,3 +30,13 @@ when 6, 2013, 2014
 when 7
   'http://mirrorlist.repoforge.org/el7/mirrors-rpmforge'
 end
+
+# Civilize a node into behaving properly and not being the animal it is.
+default[:garcon][:civilize][:iptables]  = true
+default[:garcon][:civilize][:selinux]   = true
+default[:garcon][:civilize][:dotfiles]  = true
+default[:garcon][:civilize][:ruby_gems] = true
+default[:garcon][:civilize][:docker]    = %w[tar initscripts]
+default[:garcon][:civilize][:rhel_svcs] = %w[
+  autofs avahi-daemon bluetooth cpuspeed cups gpm haldaemon messagebu
+]

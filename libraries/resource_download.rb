@@ -68,9 +68,9 @@ class Chef::Resource::Download < Chef::Resource
   # @api private
   default_action :create
 
-  # @!attribute [w] exists
+  # @!attribute [w] exist
   #   @return [TrueClass, FalseClass] true if resource exists, otherwise false
-  attr_accessor :exists
+  attr_accessor :exist
 
   def initialize(name, run_context = nil)
     super
@@ -207,7 +207,7 @@ class Chef::Resource::Download < Chef::Resource
             required: true
 
   # @return [TrueClass, FalseClass] if the resource exists.
-  def exists?
-    !!@exists
+  def exist?
+    !!@exist
   end
 end

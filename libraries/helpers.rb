@@ -22,7 +22,9 @@
 
 require 'openssl'
 require 'base64'
+require 'thread'
 require 'securerandom'
+require_relative 'exceptions'
 
 # Helper methods for cookbook.
 #
@@ -30,6 +32,7 @@ module Garcon
   # A set of helper methods shared by all resources and providers.
   #
   module Helpers
+    include Garcon::Exceptions
     include Chef::Mixin::ShellOut
 
     # Check to see if the recipe has already been included, if not include it.
@@ -98,27 +101,74 @@ module Garcon
       end
     end
 
-    # Throws water in the face of a lazy attribute, returns the unlazy value,
-    # good for nothing long-haird hippy
+    # Returns a hash using col1 as keys and col2 as values.
     #
-    # @param [Chef::DelayedEvaluator, Proc] var
-    # @return [String]
-    # @api private
-    def lazy_eval(var)
-      if var && var.is_a?(Chef::DelayedEvaluator)
-        var = var.dup
-        var = instance_eval(&var.call)
+    # @example zip_hash([:name, :age, :sex], ['Earl', 30, 'male'])
+    #   => { :age => 30, :name => "Earl", :sex => "male" }
+    #
+    # @param [Array] col1
+    #   Containing the keys.
+    # @param [Array] col2
+    #   Values for hash.
+    #
+    # @return [Hash]
+    #
+    # @api public
+    def zip_hash(col1, col2)
+      col1.zip(col2).inject({}) { |r, i| r[i[0]] = i[1]; r }
+    end
+
+    # Throws water in the face of a lazy attribute, returns the unlazy value,
+    # good for nothing long-haird hippy.
+    #
+    # @param [Object] instance
+    #   instance to instance_eval
+    #
+    # @param [Array] args
+    #   arguments to pass into the block
+    #
+    # @return [Proc]
+    #
+    # @api public
+    def lazy_eval(instance, *args)
+      if instance && instance.is_a?(Chef::DelayedEvaluator)
+        if arity == 0
+          instance.instance_eval(&self)
+        else
+          instance.instance_exec(*args, &self)
+        end
+      else
+        arity == 0 ? call : (arity == 1) ? call(instance) : call(instance, *args)
       end
-      var
-    rescue
-      var.call
+    end
+
+    # Returns true if the current node is a docker container, otherwise false.
+    #
+    # @return [TrueClass, FalseClass]
+    #
+    # @api public
+    def docker?
+      ::File.exist?('/.dockerinit') || ::File.exist?('/.dockerenv')
+    end
+
+    # Returns true if the current node has selinux enabled, otherwise false.
+    #
+    # @return [TrueClass, FalseClass]
+    #
+    # @api public
+    def selinux?
+      if installed?('libselinux-utils')
+        Mixlib::ShellOut.new('getenforce').run_command.stdout != "Disabled\n"
+      else
+        false
+      end
     end
 
     # Runs a code block, and retries it when an exception occurs. Should the
     # number of retries be reached without success, the last exception will be
     # raised.
     #
-    # @param opts [Hash{Symbol => Value}]
+    # @param opts [Hash]
     # @option opts [Fixnum] :tries
     #   number of attempts to retry before raising the last exception
     # @option opts [Fixnum] :sleep
@@ -132,15 +182,23 @@ module Garcon
     #   ensure a block of code is executed, regardless of whether an exception
     #   is raised
     #
-    # @return [Block]
+    # @yield [Proc]
+    #   a block that will be run, and if it raises an error, re-run until
+    #   success, or timeout is finally reached
+    #
+    # @raise [Exception]
+    #   the most recent Exception that caused the loop to retry before giving up
+    #
+    # @return [Proc]
+    #   the value of the passed block.
     #
     # @api public
     def retrier(options = {}, &_block)
-      tries  = options.fetch(:tries,  4)
-      wait   = options.fetch(:sleep,  1)
+      tries  = options.fetch(:tries,              4)
+      wait   = options.fetch(:sleep, ->(n) { 4**n })
       on     = options.fetch(:on,     StandardError)
-      match  = options.fetch(:match,  /.*/)
-      insure = options.fetch(:insure, proc {})
+      match  = options.fetch(:match,           /.*/)
+      insure = options.fetch(:insure,       proc {})
 
       retries = 0
       retry_exception = nil
@@ -164,6 +222,76 @@ module Garcon
         insure.call(retries)
       end
     end
+    module_function :retrier
+
+    # @param [String] msg a custom message raised when polling fails
+    # @param [Numeric] seconds number of seconds to poll
+    # @yield a block that determines whether polling should continue
+    # @yield return false if polling should continue
+    # @yield return true if polling is complete
+    # @raise [RuntimeError] when polling fails
+    # @return the return value of the passed block
+    # @since 1.0.0
+    def poll(msg = nil, seconds = nil)
+      seconds ||= 8
+      delay   ||= 0.1
+      try_until = Time.now + seconds
+      failure   = nil
+
+      while Time.now < try_until do
+        result = yield
+        return result if result
+        sleep delay
+      end
+      msg ||= "polling failed after #{seconds} seconds"
+      raise msg
+    end
+    module_function :poll
+
+    # Runs a code block, if an exception occurs wait for some amount of time
+    # then retry until success or a timeout is reached, raising the most recent
+    # exception.
+    #
+    # @example
+    #   def wait_for_server
+    #     poll('they must be sleeping', 20) do
+    #       begin
+    #         TCPSocket.new(SERVER_IP, SERVER_PORT)
+    #         true
+    #       rescue Exception
+    #         false
+    #       end
+    #     end
+    #   end
+    #
+    # @param [Numeric] seconds Wall-clock number of seconds to be patient,
+    # default is 5 seconds
+    # @param [Numeric] delay Seconds to hesitate after encountering a failure,
+    # default is 0.1 seconds
+    # @yield a block that will be run, and if it raises an error, re-run until
+    # success, or patience runs out
+    # @raise [Exception] the most recent Exception that caused the loop to retry
+    # before giving up.
+    # @return the value of the passed block
+    # @since 1.2.0
+    #
+    def patiently(seconds = nil, delay = nil)
+      seconds ||= 8
+      delay   ||= 0.1
+      try_until = Time.now + seconds
+      failure   = nil
+
+      while Time.now < try_until do
+        begin
+          return yield
+        rescue Exception => e
+          failure = e
+          sleep delay
+        end
+      end
+      raise failure if failure
+    end
+    module_function :patiently
 
     # Retrieve the version number of the cookbook in the run list.
     #
@@ -173,6 +301,7 @@ module Garcon
     # @return [Integer]
     #   version of the cookbook.
     #
+    # @api public
     def cookbook_version(name = nil)
       cookbook = name.nil? ? cookbook_name : name
       node.run_context.cookbook_collection[cookbook].metadata.version
@@ -186,10 +315,14 @@ module Garcon
     # @return [TrueClass, FalseClass]
     #   true if the command is found in the path, false otherwise
     #
+    # @api public
     def installed?(cmd)
       !which(cmd).nil?
     end
 
+    # Monitor for thread safety
+    #
+    # @api public
     def monitor
       @monitor ||= Monitor.new
     end
@@ -228,26 +361,21 @@ module Garcon
       end
     end
 
+    # Shortcut to return cache path
+    #
+    # @return [String]
+    # @api public
     def file_cache_path
       Chef::Config[:file_cache_path]
     end
 
-    def count
-      @count ||= 0
-      @count += 1
-    end
-
-    def announce(msg = nil)
-      ca = "#{caller[1][/`.*'/][1..-2]}".yellow
-      co = "#{count}".purple
-      s = '⏐'.green
-      msg = msg.nil? ? nil : msg.cyan
-      log.info "#{self.class} #{s} #{ca} #{s} #{co} #{s} #{msg}"
-    end
-
-    def banner(msg = nil, color = :orange)
-      msg = msg.nil? ? nil : msg
-      log.info "#{msg}".send(color.to_sym)
+    # Amazingly and somewhat surprisingly comma separate a number
+    #
+    # @param [Fixnum] num
+    # @return [String]
+    # @api public
+    def comma_separate(num)
+      num.to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse
     end
 
     # Unshorten a shortened URL
@@ -262,10 +390,12 @@ module Garcon
     #   use cached result if available
     #
     # @return Original url, a url that does not redirects
+    #
+    # @api public
     def unshorten(url, opts= {})
       options = {
-        max_level: opts.fetch(:max_level, 10),
-        timeout:   opts.fetch(:timeout, 2),
+        max_level: opts.fetch(:max_level,   10),
+        timeout:   opts.fetch(:timeout,      2),
         use_cache: opts.fetch(:use_cache, true)
       }
       url = (url =~ /^https?:/i) ? url : "http://#{url}"
@@ -274,9 +404,10 @@ module Garcon
 
     private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
 
+
     @@cache = { }
 
-    # @!visibility private
+    # @api private
     def __unshorten__(url, options, level = 0)
       return @@cache[url] if options[:use_cache] && @@cache[url]
       return url if level >= options[:max_level]
@@ -304,22 +435,30 @@ module Garcon
         url
       end
     end
-  end
 
-  class Exceptions
-    # A custom exception class for not implemented methods
-    class MethodNotImplemented < NotImplementedError
-      def initialize(method)
-        super("Method '#{method}' needs to be implemented")
-      end
+    # Wait the given number of seconds for the block operation to complete.
+    #
+    # @param [Integer] seconds
+    #   number of seconds to wait
+    #
+    # @return [Object]
+    #   result of the block operation
+    #
+    # @raise [Garcon::TimeoutError]
+    #   when the block operation does not complete in the alloted time
+    #
+    # @api private
+    def timeout(seconds)
+      thread = Thread.new { Thread.current[:result] = yield }
+      thread.join(seconds) ? return thread[:result] : raise TimeoutError
+    ensure
+      Thread.kill(thread) unless thread.nil?
     end
-
-    class ValidationError < RuntimeError;    end
-    class InvalidPort     < ValidationError; end
+    module_function :timeout
   end
 
   unless Chef::Recipe.ancestors.include?(Garcon::Helpers)
-    Chef::Recipe.send(:include, Garcon::Helpers)
+    Chef::Recipe.send(:include,   Garcon::Helpers)
     Chef::Resource.send(:include, Garcon::Helpers)
     Chef::Provider.send(:include, Garcon::Helpers)
   end
