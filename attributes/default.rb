@@ -35,7 +35,7 @@ end
 default[:garcon][:civilize][:iptables]  = true
 default[:garcon][:civilize][:selinux]   = true
 default[:garcon][:civilize][:dotfiles]  = true
-default[:garcon][:civilize][:ruby_gems] = true
+default[:garcon][:civilize][:ruby]      = true
 default[:garcon][:civilize][:docker]    = %w[tar initscripts]
 default[:garcon][:civilize][:rhel_svcs] = %w[
   autofs avahi-daemon bluetooth cpuspeed cups gpm haldaemon messagebu
