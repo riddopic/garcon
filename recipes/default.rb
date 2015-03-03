@@ -31,7 +31,7 @@ concurrent :prerequisite do
 end
 
 node.override[:'build-essential'][:compile_time] = true
-single_include 'build-essential::default'
+monitor.synchronize { include_recipe 'build-essential::default' }
 
 chef_gem('hoodie') { action :nothing }.run_action(:install)
 require 'hoodie' unless defined?(Hoodie)
