@@ -23,6 +23,7 @@
 require_relative 'validations'
 require_relative 'zen_master'
 require_relative 'exceptions'
+require_relative 'resource_helpers'
 
 # Include hooks to extend with class and instance methods.
 #
@@ -32,23 +33,20 @@ module Garcon
   module Resource
     include Validations
     include ZenMaster
+
+    def self.included(descendant)
+      super
+
+      def descendant.synthesize
+        include Garcon::Resource::Synthesize
+      end
+    end
   end
 
   # Include hooks to extend Provider with class and instance methods.
   #
   module Provider
     include ZenMaster
-  end
-
-  def require_hoodie
-    unless defined?(Hoodie)
-      single_include 'build-essential::default'
-      chef_gem 'hoodie'
-      Chef::Recipe.send(:require, 'hoodie')
-      Chef::Recipe.send(:include,   Hoodie)
-      Chef::Resource.send(:include, Hoodie)
-      Chef::Provider.send(:include, Hoodie)
-    end
   end
 
   # Extends a descendant with class and instance methods
@@ -60,15 +58,37 @@ module Garcon
   # @api private
   def self.included(descendant)
     super
-
     descendant.class_exec { include Garcon::Exceptions }
-
     if descendant < Chef::Resource
       descendant.class_exec { include Garcon::Resource }
-
     elsif descendant < Chef::Provider
       descendant.class_exec { include Garcon::Provider }
     end
   end
   private_class_method :included
+end
+
+# Callable form to allow passing in options:
+#   include Garcon(synthesize: true)
+#
+def Garcon(options = {})
+  if options.is_a?(Class)
+    options = { parent: options }
+  end
+
+  anonymous_module = Module.new
+
+  def anonymous_module.name
+    super || 'Garcon'
+  end
+
+  anonymous_module.define_singleton_method(:included) do |klass|
+    super(klass)
+    klass.class_exec { include Garcon }
+    if klass < Chef::Resource
+      klass.synthesize if options[:synthesize]
+    end
+  end
+
+  anonymous_module
 end

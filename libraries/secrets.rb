@@ -29,19 +29,43 @@ require 'fileutils'
 # Include hooks to extend with class and instance methods.
 #
 module Garcon
-  # instance methods for Resources
+  # Adds `#encrypt` and `#decrypt` methods to strings
+  #
+  class String
+    # Returns a new string containing the encrypted version of itself
+    def encrypt(options = {})
+      Secrets.encrypt(options.merge(value: self))
+    end
+
+    # Replaces the contents of a string with the encrypted version of itself
+    def encrypt!(options ={})
+      replace encrypt(options)
+    end
+
+    # Returns a new string containing the decrypted version of itself
+    def decrypt(options = {})
+      Secrets.decrypt(options.merge(value: self))
+    end
+
+    # Replaces the contents of a string with the decrypted version of itself
+    def decrypt!(options ={})
+      replace decrypt(options)
+    end
+  end
+
+  # Secret instance methods for secrative resources.
   #
   module SecretsResource
-    # A file containing a secret of some type.
+    # A file containing secrets.
     #
     # @param [String] secret
-    #   File to use to store the Direcctory Service Manager password.
+    #   file to temporarily store secrets.
     #
-    # @return [Garcon::Secrets]
+    # @return [Garcon::Secrets(#path)]
     #
     # @api private
     def secret(arg = nil)
-      set_or_return :admin_passwd, arg, kind_of: [Garcon::Secrets, String],
+      set_or_return :secret, arg, kind_of: [Garcon::Secrets, String],
         default: Garcon::Secrets.new(node[:garcon][:secret]).freeze
     end
   end

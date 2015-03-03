@@ -63,7 +63,7 @@ cookbook_file '/root/.inputrc' do
   action   :create
 end
 
-%[/tmp /var/tmp].each do |dir|
+%w[/tmp /var/tmp].each do |dir|
   house_keeping dir do
     recursive true
     exclude   %r(/^ssh-*/i)

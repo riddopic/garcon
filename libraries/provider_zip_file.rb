@@ -44,7 +44,7 @@ class Chef::Provider::ZipFile < Chef::Provider
 
   # Load and return the current resource.
   #
-  # @return [Chef::Provider::Dsccsetup]
+  # @return [Chef::Provider::ZipFile]
   #
   # @api private
   def load_current_resource
@@ -55,6 +55,8 @@ class Chef::Provider::ZipFile < Chef::Provider
   # Unzip method
   #
   def action_unzip
+    binding.pry
+
     monitor.synchronize do
       converge_by "Unzip #{new_resource.source} to #{new_resource.path}" do
         zipfile   = cached_file(new_resource.source, new_resource.checksum)

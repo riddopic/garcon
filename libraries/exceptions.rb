@@ -66,31 +66,49 @@ module Garcon
       end
     end
 
-    # Raised when errors occur during configuration.
-    ConfigurationError             = Class.new(StandardError)
+    # # Raised when errors occur during configuration.
+    # ConfigurationError             = Class.new(StandardError)
+    #
+    # # Raised when an object's methods are called when it has not been
+    # # properly initialized.
+    # InitializationError            = Class.new(StandardError)
+    #
+    # # Raised when an operation times out.
+    # TimeoutError                   = Class.new(RuntimeError)
+    # PollingError                   = Class.new(RuntimeError)
+    #
+    # # Raised when node[:garcon][:databag_type] is not valid.
+    # InvalidDataBagTypeError        = Class.new(RuntimeError)
+    #
+    # # Raised when cipher direction is invalid.
+    # InvalidCipherError             = Class.new(RuntimeError)
+    #
+    # # Raised when no encryption key password is specified.
+    # MissingEncryptionPasswordError = Class.new(RuntimeError)
+    # ResourceNotFoundError          = Class.new(RuntimeError)
+    # InvalidStateError              = Class.new(RuntimeError)
+    # InvalidTransitionError         = Class.new(RuntimeError)
+    # InvalidCallbackError           = Class.new(RuntimeError)
+    # TransitionFailedError          = Class.new(RuntimeError)
+    # TransitionConflictError        = Class.new(RuntimeError)
+    # GuardFailedError               = Class.new(RuntimeError)
 
-    # Raised when an object's methods are called when it has not been
-    # properly initialized.
-    InitializationError            = Class.new(StandardError)
-
-    # Raised when an operation times out.
-    TimeoutError                   = Class.new(RuntimeError)
-    PollingError                   = Class.new(RuntimeError)
-
-    # Raised when node[:garcon][:databag_type] is not valid.
-    InvalidDataBagTypeError        = Class.new(RuntimeError)
-
-    # Raised when cipher direction is invalid.
-    InvalidCipherError             = Class.new(RuntimeError)
-
-    # Raised when no encryption key password is specified.
-    MissingEncryptionPasswordError = Class.new(RuntimeError)
-    ResourceNotFoundError          = Class.new(RuntimeError)
-    InvalidStateError              = Class.new(RuntimeError)
-    InvalidTransitionError         = Class.new(RuntimeError)
-    InvalidCallbackError           = Class.new(RuntimeError)
-    TransitionFailedError          = Class.new(RuntimeError)
-    TransitionConflictError        = Class.new(RuntimeError)
-    GuardFailedError               = Class.new(RuntimeError)
+    %w[ConfigurationError
+       InitializationError
+       TimeoutError
+       PollingError
+       InvalidDataBagTypeError
+       InvalidCipherError
+       MissingEncryptionPasswordError
+       ResourceNotFoundError
+       InvalidStateError
+       InvalidTransitionError
+       InvalidCallbackError
+       TransitionFailedError
+       TransitionConflictError
+       GuardFailedError
+    ].each do |klass|
+      klass = Class.new(RuntimeError) unless defined?(klass)
+    end
   end
 end

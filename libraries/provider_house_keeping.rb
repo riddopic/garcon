@@ -50,7 +50,6 @@ class Chef::Provider::HouseKeeping < Chef::Provider
   def load_current_resource
     @current_resource = PurgeFlushBinge.new(new_resource)
     @current_resource.exclude(new_resource.exclude) if new_resource.exclude
-
     @current_resource
   end
 
@@ -74,7 +73,7 @@ class Chef::Provider::HouseKeeping < Chef::Provider
               force_unlink          new_resource.force_unlink
               manage_symlink_source new_resource.manage_symlink_source
               backup  false
-              action :nothing
+              action :delete
             end
           end
           new_resource.updated_by_last_action(true)

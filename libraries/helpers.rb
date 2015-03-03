@@ -35,18 +35,11 @@ module Garcon
     include Garcon::Exceptions
     include Chef::Mixin::ShellOut
 
-    # Check to see if the recipe has already been included, if not include it.
-    # It will return false if it has already been run or return the last value
-    # of the includeed recipe.
-    #
-    # @param [String] recipe
-    #   the recipe to include only once
-    #
-    # @return [TrueClass, FalseClass]
-    #   false if it's already been run
+    # DEPRECATED: A stupid mistake, attributed to lack of sleep.
     #
     def single_include(recipe)
-      node.run_context.loaded_recipe?(recipe) ? false : (include_recipe recipe)
+      Chef::Log.warn 'This method is DEPRECATED and will removed! Stop using it!'
+      include_recipe recipe
     end
 
     # Returns a salted PBKDF2 hash of the password.
@@ -138,7 +131,7 @@ module Garcon
           instance.instance_exec(*args, &self)
         end
       else
-        arity == 0 ? call : (arity == 1) ? call(instance) : call(instance, *args)
+      arity == 0 ? call : (arity == 1) ? call(instance) : call(instance, *args)
       end
     end
 
@@ -301,8 +294,8 @@ module Garcon
     #
     # @api private
     def timeout(seconds)
-      thread = Thread.new { Thread.current[:result] = yield }
-      thread.join(seconds) ? return thread[:result] : raise TimeoutError
+      thread = Thread.new  { Thread.current[:result] = yield }
+      thread.join(seconds) ? (return thread[:result]) : (raise TimeoutError)
     ensure
       Thread.kill(thread) unless thread.nil?
     end
@@ -376,12 +369,18 @@ module Garcon
       end
     end
 
-    # Shortcut to return cache path
+    # Shortcut to return cache path.
     #
+    # @param [String] args
+    #   name of file to return path with file
     # @return [String]
     # @api public
-    def file_cache_path
-      Chef::Config[:file_cache_path]
+    def file_cache_path(*args)
+      if args.nil?
+        Chef::Config[:file_cache_path]
+      else
+        ::File.join(Chef::Config[:file_cache_path], args)
+      end
     end
 
     # Amazingly and somewhat surprisingly comma separate a number
@@ -419,7 +418,6 @@ module Garcon
 
     private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
 
-
     @@cache = { }
 
     # @api private
@@ -456,6 +454,59 @@ module Garcon
     Chef::Recipe.send(:include,   Garcon::Helpers)
     Chef::Resource.send(:include, Garcon::Helpers)
     Chef::Provider.send(:include, Garcon::Helpers)
+  end
+end
+
+# Add contains? method to string
+#
+class String
+  # Search a text file for a matching string
+  #
+  # @return [TrueClass, FalseClass]
+  #   True if the file is present and a match was found, otherwise returns
+  #   false if file does not exist and/or does not contain a match
+  #
+  def contains?(str)
+    return false unless ::File.exist?(self)
+    ::File.open(self, &:readlines).collect { |l| return true if l.match(str) }
+    false
+  end
+end
+
+class Chef
+  class Node
+    # Boolean to check if a recipe is loaded in the run list.
+    #
+    # @param [String] recipe
+    #   the command to find
+    #
+    # @return [TrueClass, FalseClass]
+    #   true if the command is found in the path, false otherwise
+    #
+    # @api public
+    def has_recipe?(recipe)
+      loaded_recipes.include?(with_default(recipe))
+    end
+
+    private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
+
+    # Automatically appends "::default" to recipes that need them.
+    #
+    # @param [String] recipe
+    #
+    # @return [String]
+    #
+    def with_default(recipe)
+      name.include?('::') ? name : "#{recipe}::default"
+    end
+
+    # The list of loaded recipes on the Chef run (normalized)
+    #
+    # @return [Array<String>]
+    #
+    def loaded_recipes
+      node.run_context.loaded_recipes.map { |name| with_default(name) }
+    end
   end
 end
 
