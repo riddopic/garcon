@@ -29,30 +29,6 @@ require 'fileutils'
 # Include hooks to extend with class and instance methods.
 #
 module Garcon
-  # Adds `#encrypt` and `#decrypt` methods to strings
-  #
-  class String
-    # Returns a new string containing the encrypted version of itself
-    def encrypt(options = {})
-      Secrets.encrypt(options.merge(value: self))
-    end
-
-    # Replaces the contents of a string with the encrypted version of itself
-    def encrypt!(options ={})
-      replace encrypt(options)
-    end
-
-    # Returns a new string containing the decrypted version of itself
-    def decrypt(options = {})
-      Secrets.decrypt(options.merge(value: self))
-    end
-
-    # Replaces the contents of a string with the decrypted version of itself
-    def decrypt!(options ={})
-      replace decrypt(options)
-    end
-  end
-
   # Secret instance methods for secrative resources.
   #
   module SecretsResource
@@ -339,3 +315,28 @@ module Garcon
     end
   end
 end
+
+# Adds `#encrypt` and `#decrypt` methods to strings
+#
+class String
+  # Returns a new string containing the encrypted version of itself
+  def encrypt(options = {})
+    Secrets.encrypt(options.merge(value: self))
+  end
+
+  # Replaces the contents of a string with the encrypted version of itself
+  def encrypt!(options ={})
+    replace encrypt(options)
+  end
+
+  # Returns a new string containing the decrypted version of itself
+  def decrypt(options = {})
+    Secrets.decrypt(options.merge(value: self))
+  end
+
+  # Replaces the contents of a string with the decrypted version of itself
+  def decrypt!(options ={})
+    replace decrypt(options)
+  end
+end
+
