@@ -475,6 +475,18 @@ end
 
 class Chef
   class Node
+    class AttributeDoesNotExistError < StandardError
+      def initialize(keys, key)
+        hash = keys.map { |key| "['#{key}']" }
+
+        super <<-EOH
+No attribute `node#{hash.join}' exists on
+the current node. Specifically the `#{key}' attribute is not
+defined. Please make sure you have spelled everything correctly.
+EOH
+      end
+    end
+
     # Boolean to check if a recipe is loaded in the run list.
     #
     # @param [String] recipe
@@ -486,6 +498,57 @@ class Chef
     # @api public
     def has_recipe?(recipe)
       loaded_recipes.include?(with_default(recipe))
+    end
+
+    # Determine if the current node is in the given Chef environment
+    # (or matches the given regular expression).
+    #
+    # @param [String, Regex] environment
+    #
+    # @return [Boolean]
+    #
+    def in?(environment)
+      environment === chef_environment
+    end
+
+    # Safely fetch a deeply nested attribute by specifying a list of keys,
+    # bypassing Ruby's Hash notation. This method swallows +NoMethodError+
+    # exceptions, avoiding the most common error in Chef-land.
+    #
+    # This method will return +nil+ if any deeply nested key does not exist.
+    #
+    # @see [Node#deep_fetch!]
+    #
+    def deep_fetch(*keys)
+      deep_fetch!(*keys)
+    rescue NoMethodError, AttributeDoesNotExistError
+      nil
+    end
+
+    # Deeply fetch a node attribute by specifying a list of keys, bypassing
+    # Ruby's Hash notation.
+    #
+    # This method will raise any exceptions, such as
+    # +undefined method `[]' for nil:NilClass+, just as if you used the native
+    # attribute notation. If you want a safely vivified hash, see {deep_fetch}.
+    #
+    # @example Fetch a deeply nested key
+    #   node.deep_fetch(:foo, :bar, :zip) #=> node['foo']['bar']['zip']
+    #
+    # @param [Array<String, Symbol>] keys
+    #   the list of keys to kdeep fetch
+    #
+    # @return [Object]
+    #
+    def deep_fetch!(*keys)
+      keys.map!(&:to_s)
+      keys.inject(attributes.to_hash) do |hash, key|
+        if hash.key?(key)
+          hash[key]
+        else
+          raise AttributeDoesNotExistError.new(keys, key)
+        end
+      end
     end
 
     private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
@@ -506,6 +569,35 @@ class Chef
     #
     def loaded_recipes
       node.run_context.loaded_recipes.map { |name| with_default(name) }
+    end
+
+    # The namespace options.
+    #
+    # @return [Hash]
+    #
+    def namespace_options
+      @namespace_options ||= { precedence: default }
+    end
+
+    # The current namespace. This is actually a reverse-ordered array that
+    # vivifies the correct hash.#
+    #
+    # @return [Array<String>]
+    #
+    def current_namespace
+      @current_namespace ||= []
+    end
+
+    # The vivified (fake-filled) hash. It is assumed that the default value
+    # for non-existent keys in the hash is a new, empty hash.
+    #
+    # @return [Hash<String, Hash>]
+    #
+    def vivified
+      current_namespace.inject(namespace_options[:precedence]) do |hash, item|
+        hash[item] ||= {}
+        hash[item]
+      end
     end
   end
 end
