@@ -106,7 +106,6 @@ module Garcon
     #
     # @return [Hash]
     #
-    # @api public
     def zip_hash(col1, col2)
       col1.zip(col2).inject({}) { |r, i| r[i[0]] = i[1]; r }
     end
@@ -122,7 +121,6 @@ module Garcon
     #
     # @return [Proc]
     #
-    # @api public
     def lazy_eval(instance, *args)
       if instance && instance.is_a?(Chef::DelayedEvaluator)
         if arity == 0
@@ -148,7 +146,6 @@ module Garcon
     #
     # @return [TrueClass, FalseClass]
     #
-    # @api public
     def selinux?
       if installed?('libselinux-utils')
         Mixlib::ShellOut.new('getenforce').run_command.stdout != "Disabled\n"
@@ -185,7 +182,6 @@ module Garcon
     # @return [Proc]
     #   the value of the passed block.
     #
-    # @api public
     def retrier(options = {}, &_block)
       tries  = options.fetch(:tries,              4)
       wait   = options.fetch(:sleep, ->(n) { 4**n })
@@ -202,7 +198,6 @@ module Garcon
         raise unless exception.message =~ match
         raise if retries + 1 >= tries
 
-        # Interrupt Exception could be raised while sleeping
         begin
           sleep wait.respond_to?(:call) ? wait.call(retries) : wait
         rescue *[on]
@@ -216,27 +211,6 @@ module Garcon
       end
     end
     module_function :retrier
-
-    # @param [String] msg a custom message raised when polling fails
-    # @param [Numeric] seconds number of seconds to poll
-    # @yield a block that determines whether polling should continue
-    # @yield return false if polling should continue
-    # @yield return true if polling is complete
-    # @raise [Garcon::PollingError] when polling fails
-    # @return the return value of the passed block
-    # @since 1.0.0
-    def poll(wait = 8, delay = 0.1)
-      try_until = Time.now + wait
-      failure   = nil
-
-      while Time.now < try_until do
-        result = yield
-        return result if result
-        sleep delay
-      end
-      raise TimeoutError
-    end
-    module_function :poll
 
     # Runs a code block, if an exception occurs wait for some amount of time
     # then retry until success or a timeout is reached, raising the most recent
@@ -254,16 +228,48 @@ module Garcon
     #     end
     #   end
     #
-    # @param [Numeric] seconds Wall-clock number of seconds to be patient,
-    # default is 5 seconds
-    # @param [Numeric] delay Seconds to hesitate after encountering a failure,
-    # default is 0.1 seconds
+    # @param [Ingeger] wait
+    #   number of seconds to be patient and wait, default is 8 seconds
+    # @param [Ingeger] delay
+    #   seconds to hesitate after encountering a failure, default is 0.1 seconds
+    #
+    # @yield a block that determines whether polling should continue
+    # @yield return false if polling should continue
+    # @yield return true if polling is complete
+    #
+    # @raise [Garcon::PollingError] when polling fails
+    #
+    # @return the return value of the passed block
+    #
+    def poll(wait = 8, delay = 0.1)
+      try_until = Time.now + wait
+      failure   = nil
+
+      while Time.now < try_until do
+        result = yield
+        return result if result
+        sleep delay
+      end
+      raise PollingError
+    end
+    module_function :poll
+
+    # Runs a code block, if an exception occurs wait for some amount of time
+    # then retry until success or a timeout is reached, raising the most recent
+    # exception.
+    #
+    # @param [Ingeger] wait
+    #   number of seconds to be patient and wait, default is 8 seconds
+    # @param [Ingeger] delay
+    #   seconds to hesitate after encountering a failure, default is 0.1 seconds
+    #
     # @yield a block that will be run, and if it raises an error, re-run until
     # success, or patience runs out
+    #
     # @raise [Exception] the most recent Exception that caused the loop to retry
     # before giving up.
+    #
     # @return the value of the passed block
-    # @since 1.2.0
     #
     def patiently(wait = 8, delay = 0.1)
       try_until = Time.now + wait
@@ -292,7 +298,6 @@ module Garcon
     # @raise [Garcon::TimeoutError]
     #   when the block operation does not complete in the alloted time
     #
-    # @api private
     def timeout(seconds)
       thread = Thread.new  { Thread.current[:result] = yield }
       thread.join(seconds) ? (return thread[:result]) : (raise TimeoutError)
@@ -309,7 +314,6 @@ module Garcon
     # @return [Integer]
     #   version of the cookbook.
     #
-    # @api public
     def cookbook_version(name = nil)
       cookbook = name.nil? ? cookbook_name : name
       node.run_context.cookbook_collection[cookbook].metadata.version
@@ -323,20 +327,19 @@ module Garcon
     # @return [TrueClass, FalseClass]
     #   true if the command is found in the path, false otherwise
     #
-    # @api public
     def installed?(cmd)
       !which(cmd).nil?
     end
 
     # Monitor for thread safety
     #
-    # @api public
     def monitor
       @monitor ||= Monitor.new
     end
 
     # Helper method to get Aria2 installed, enables the yum repo, installs then
     # removes the repo.
+    #
     def prerequisite
       monitor.synchronize do
         package('gnutls')   { action :nothing }.run_action(:install)
@@ -362,7 +365,6 @@ module Garcon
     #
     # @param block [Block]
     #
-    # @api public
     def with_tmp_dir(&block)
       Dir.mktmpdir(SecureRandom.hex(3)) do |tmp_dir|
         Dir.chdir(tmp_dir, &block)
@@ -373,8 +375,9 @@ module Garcon
     #
     # @param [String] args
     #   name of file to return path with file
+    #
     # @return [String]
-    # @api public
+    #
     def file_cache_path(*args)
       if args.nil?
         Chef::Config[:file_cache_path]
@@ -386,8 +389,9 @@ module Garcon
     # Amazingly and somewhat surprisingly comma separate a number
     #
     # @param [Fixnum] num
+    #
     # @return [String]
-    # @api public
+    #
     def comma_separate(num)
       num.to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse
     end
@@ -405,7 +409,6 @@ module Garcon
     #
     # @return Original url, a url that does not redirects
     #
-    # @api public
     def unshorten(url, opts= {})
       options = {
         max_level: opts.fetch(:max_level,   10),
@@ -495,7 +498,6 @@ EOH
     # @return [TrueClass, FalseClass]
     #   true if the command is found in the path, false otherwise
     #
-    # @api public
     def has_recipe?(recipe)
       loaded_recipes.include?(with_default(recipe))
     end
