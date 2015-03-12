@@ -147,6 +147,7 @@ class Chef::Provider::ZipFile < Chef::Provider
   # @api private
   def cached_file(src, checksum = nil)
     if src =~ URI::ABS_URI && %w[ftp http https].include?(URI.parse(src).scheme)
+      poll(180, 2) { installed?('aria2c') }
       file = ::File.basename(URI.unescape(URI.parse(src).path))
       cache_file_path = ::File.join(Chef::Config[:file_cache_path], file)
 

@@ -250,7 +250,7 @@ module Garcon
         return result if result
         sleep delay
       end
-      raise PollingError
+      raise TimeoutError
     end
     module_function :poll
 
