@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
 # Cookbook Name:: garcon
-# HWRP:: provider_concurrent
+# Provider:: concurrent
 #
 # Author:    Stefano Harding <riddopic@gmail.com>
 # License:   Apache License, Version 2.0
@@ -23,7 +23,6 @@
 require_relative 'pool'
 
 class Chef::Provider::Concurrent < Chef::Provider
-  include Garcon
 
   provides :concurrent, os: 'linux'
 
@@ -51,37 +50,34 @@ class Chef::Provider::Concurrent < Chef::Provider
 
   def action_start
     begin
-      Chef::Log.info 'Thread-pool already running - nothing to do' if @@pool
+      Chef::Log.debug 'Thread-pool already running - nothing to do' if @@pool
     rescue
-      converge_by 'Concurrent thread-pool starting up.' do
+      converge_by 'Concurrent thread-pool startup' do
         @@pool ||= Thread.pool(new_resource.min, new_resource.max)
         pool_handler
-        Chef::Log.info "Thread-pool #{@@pool} startup complete."
       end
     end
   end
 
-	# Shut down the pool, it will block until all tasks have finished running.
+	# Shut down the pool, block until all tasks have finished running.
   #
   def action_stop
     if @@pool.shutdown?
-      Chef::Log.info "#{new_resource} already shutdown - nothing to do."
+      Chef::Log.debug "#{new_resource} already shutdown - nothing to do."
     else
-      converge_by "Concurrent pool #{new_resource} is being shutdown" do
+      converge_by 'Concurrent thread-pool shutdown' do
         @@pool.shutdown
-        Chef::Log.info "Pool #{new_resource} shutdown complete."
       end
     end
   end
 
   def action_run
     @@pool.process do
-      job = job_num
-      converge_by "#{job}: Concurrent converge for #{new_resource.name}" do
+      converge_by "Concurrent converge for #{new_resource.name}" do
         begin
           saved_run_context = @run_context
-          temp_run_context = @run_context.dup
-          @run_context = temp_run_context
+          temp_run_context  = @run_context.dup
+          @run_context      = temp_run_context
           @run_context.resource_collection = Chef::ResourceCollection.new
 
           return_value = instance_eval(&@new_resource.block)
@@ -89,37 +85,31 @@ class Chef::Provider::Concurrent < Chef::Provider
           return_value
         ensure
           @run_context = saved_run_context
-          if temp_run_context.resource_collection.any? {|r| r.updated? }
+          if temp_run_context.resource_collection.any? { |r| r.updated? }
             new_resource.updated_by_last_action(true)
           end
         end
       end
-      Chef::Log.info "#{job}: Completed converge for #{new_resource.name}"
     end
   end
 
   private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
 
-  def job_num
-    @@job ||= 0
-    @@job += 1
-  end
-
   def pool_handler
     handler = ::File.join(node[:chef_handler][:handler_path], 'threadpool.rb')
 
     cookbook_file handler do
-      owner 'root'
-      group 'root'
-      mode 00755
+      owner  'root'
+      group  'root'
+      mode    00755
       action :create
     end
 
     chef_handler 'ThreadPool' do
-      source handler
+      source    handler
       arguments @@pool
       supports :report => true, :exception => true
-      action :enable
+      action   :enable
     end
   end
 end

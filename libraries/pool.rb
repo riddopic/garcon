@@ -188,9 +188,7 @@ class Thread::Pool
 
 	# Get the amount of tasks that still have to be run.
 	def backlog
-		@mutex.synchronize {
-			@todo.length
-		}
+		@mutex.synchronize { @todo.length }
 	end
 
 	# Are all tasks consumed ?
@@ -435,9 +433,7 @@ class Thread::Pool
 	end
 
 	def report_done
-		@done_mutex.synchronize {
-			@done.broadcast if done? or idle?
-		}
+		@done_mutex.synchronize { @done.broadcast if done? or idle? }
 	end
 end
 

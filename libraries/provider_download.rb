@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
-# Cookbook Name:: odsee
-# Provider:: ldap_entry
+# Cookbook Name:: garcon
+# Provider:: download
 #
 # Author:    Stefano Harding <riddopic@gmail.com>
 # License:   Apache License, Version 2.0
@@ -102,7 +102,7 @@ class Chef::Provider::Download < Chef::Provider
       end
       new_resource.updated_by_last_action(true)
     else
-      Chef::Log.info "#{new_resource.path} does not exists - nothing to do"
+      Chef::Log.debug "#{new_resource.path} does not exists - nothing to do"
     end
   end
 
@@ -114,7 +114,7 @@ class Chef::Provider::Download < Chef::Provider
       end
       new_resource.updated_by_last_action(true)
     else
-      Chef::Log.info "#{new_resource.path} does not exists - nothing to do"
+      Chef::Log.debug "#{new_resource.path} does not exists - nothing to do"
     end
   end
 

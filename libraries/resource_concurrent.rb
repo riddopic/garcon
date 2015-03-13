@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
 # Cookbook Name:: garcon
-# HWRP:: resource_concurrent
+# Resources:: concurrent
 #
 # Author:    Stefano Harding <riddopic@gmail.com>
 # License:   Apache License, Version 2.0
