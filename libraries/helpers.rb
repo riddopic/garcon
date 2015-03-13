@@ -101,6 +101,7 @@ module Garcon
     #
     # @param [Array] col1
     #   Containing the keys.
+    #
     # @param [Array] col2
     #   Values for hash.
     #
@@ -137,7 +138,6 @@ module Garcon
     #
     # @return [TrueClass, FalseClass]
     #
-    # @api public
     def docker?
       ::File.exist?('/.dockerinit') || ::File.exist?('/.dockerenv')
     end
@@ -152,6 +152,76 @@ module Garcon
       else
         false
       end
+    end
+
+    # Get a recusive list of files inside a path.
+    #
+    # @param [String] path
+    #   some path string or Pathname
+    # @param [Block] ignore
+    #   a proc/block that returns true if a given path should be ignored, if a
+    #   path is ignored, nothing below it will be searched either.
+    #
+    # @return [Array<Pathname>]
+    #   array of Pathnames for each file (no directories)
+    #
+    def all_files_under(path, &ignore)
+      path = Pathname(path)
+
+      if path.directory?
+        path.children.flat_map do |child|
+          all_files_under(child, &ignore)
+        end.compact
+      elsif path.file?
+        if block_given? && ignore.call(path)
+          []
+        else
+          [path]
+        end
+      else
+        []
+      end
+    end
+
+    # Takes an object, which can be a literal string or a string containing
+    # glob expressions, or a regexp, or a proc, or anything else that responds
+    # to #match or #call, and returns whether or not the given path matches
+    # that matcher.
+    #
+    # @param [String, #match, #call] matcher
+    #   a matcher String, RegExp, Proc, etc.
+    #
+    # @param [String] path
+    #   a path as a string
+    #
+    # @return [Boolean]
+    #   whether the path matches the matcher
+    #
+    def path_match(matcher, path)
+      case
+      when matcher.is_a?(String)
+        if matcher.include? '*'
+          ::File.fnmatch(matcher, path)
+        else
+          path == matcher
+        end
+      when matcher.respond_to?(:match)
+        !matcher.match(path).nil?
+      when matcher.respond_to?(:call)
+        matcher.call(path)
+      else
+        ::File.fnmatch(matcher.to_s, path)
+      end
+    end
+
+    # Normalize a path to not include a leading slash
+    #
+    # @param [String] path
+    #
+    # @return [String]
+    #
+    def normalize_path(path)
+      path.sub(%r{^/}, '').tr('', '')
     end
 
     # Runs a code block, and retries it when an exception occurs. Should the
@@ -385,6 +455,57 @@ module Garcon
         ::File.join(Chef::Config[:file_cache_path], args)
       end
     end
+
+    # Search for a matching node by a given role or tag.
+    #
+    # @param [Symbol] type
+    #  the filter type, can be `:role` or `:tag`
+    #
+    # @param [String] filter
+    #   the role or tag to filter on
+    #
+    # @param [Boolean] single
+    #   if we should return only a single match, or false to return all matches
+    #
+    # @yield an optional block to enumerate over the nodes
+    #
+    # @return [Array] node
+    #
+    def find_by(type, filter, single = true, &block)
+      nodes = []
+      env   = node.chef_environment
+      if node.public_send(Hoodie::Inflections.pluralize(type.to_s)).include? filter
+        nodes << node
+      end
+      if !single || nodes.empty?
+        search(:node, "#{type}:#{filter} AND chef_environment:#{env}") do |node|
+          nodes << node
+        end
+      end
+      if block_given?
+        nodes.each do |n|
+          yield n
+        end
+      else
+        if single
+          nodes.first
+        else
+          nodes
+        end
+      end
+    end
+
+    def find_by_role(role, single = true, &block)
+      find_matching(:role, role, single, block)
+    end
+
+    def find_by_tag(role, single = true, &block)
+      find_matching(:role, role, single, block)
+    end
+
+    alias_method :find_matching,     :find_by
+    alias_method :find_matching_role :find_by_role
+    alias_method :find_matching_tag, :find_by_tag
 
     # Amazingly and somewhat surprisingly comma separate a number
     #
