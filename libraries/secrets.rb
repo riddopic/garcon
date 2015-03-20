@@ -25,6 +25,7 @@ require 'openssl'
 require 'digest/sha2'
 require 'base64'
 require 'fileutils'
+require 'securerandom'
 
 # Include hooks to extend with class and instance methods.
 #
@@ -179,9 +180,9 @@ module Garcon
     #
     # @api public
     def encrypt(plaintext, passwd, options = {})
-      cipher = new_cipher(:encrypt, passwd, options)
-      cipher.iv = iv = cipher.random_iv
-      ciphertext = cipher.update(plaintext)
+      cipher      = new_cipher(:encrypt, passwd, options)
+      cipher.iv   = iv = cipher.random_iv
+      ciphertext  = cipher.update(plaintext)
       ciphertext << cipher.final
       Base64.encode64(combine_iv_and_ciphertext(iv, ciphertext))
     end
@@ -199,9 +200,9 @@ module Garcon
     # @api public
     def decrypt(ciphertext, passwd, options = {})
       iv_and_ciphertext = Base64.decode64(ciphertext)
-      cipher = new_cipher(:decrypt, passwd, options)
+      cipher     = new_cipher(:decrypt, passwd, options)
       cipher.iv, ciphertext = iv_and_ciphertext(cipher, iv_and_ciphertext)
-      plaintext = cipher.update(ciphertext)
+      plaintext  = cipher.update(ciphertext)
       plaintext << cipher.final
       plaintext
     end
@@ -263,21 +264,26 @@ module Garcon
     # @return [String] tmp_file
     # @api private
     def secret_tmp(tmp_dir = Dir.tmpdir)
-      Tempfile.new(rand(0x100000000).to_s(36), tmp_dir).path.freeze
+      Tempfile.new(random_seed), tmp_dir).path.freeze
+    end
+
+    # @return [String] random_seed
+    # @api private
+    def random_seed
+      SecureRandom.random_number(0x100000000).to_s(36)
     end
 
     protected #      A T T E N Z I O N E   A R E A   P R O T E T T A
 
     # Create a new cipher machine, with its dials set in the given direction
     #
-    # @param [:encrypt, :decrypt]
-    #   direction whether to encrypt or decrypt
+    # @param [Symbol] direction
+    #   direction whether to `:encrypt` or `:decrypt`
     # @param [String] pass
     #   secret passphrase to decrypt with
     #
     # @api private
     def new_cipher(direction, passwd, options = {})
-      check_platform_can_encrypt!
       cipher = OpenSSL::Cipher::Cipher.new(CIPHER_TYPE)
       case direction
       when :encrypt
@@ -321,21 +327,21 @@ end
 class String
   # Returns a new string containing the encrypted version of itself
   def encrypt(options = {})
-    Secrets.encrypt(options.merge(value: self))
+    Garcon::Secrets.encrypt(options.merge(value: self))
   end
 
   # Replaces the contents of a string with the encrypted version of itself
-  def encrypt!(options ={})
+  def encrypt!(options = {})
     replace encrypt(options)
   end
 
   # Returns a new string containing the decrypted version of itself
   def decrypt(options = {})
-    Secrets.decrypt(options.merge(value: self))
+    Garcon::Secrets.decrypt(options.merge(value: self))
   end
 
   # Replaces the contents of a string with the decrypted version of itself
-  def decrypt!(options ={})
+  def decrypt!(options = {})
     replace decrypt(options)
   end
 end

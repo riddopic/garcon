@@ -23,6 +23,7 @@
 require_relative 'pool'
 
 class Chef::Provider::Concurrent < Chef::Provider
+  include Chef::DSL::Recipe
 
   provides :concurrent, os: 'linux'
 

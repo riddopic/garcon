@@ -8,31 +8,29 @@ require 'chef/handler'
 class DevReporter < Chef::Handler
   attr_reader :resources, :immediate, :delayed, :always
 
-  def initialize(opts = defaults)
+  def initialize(opts = {})
     @resources = opts.fetch(:resources, true)
     @immediate = opts.fetch(:immediate, true)
     @delayed   = opts.fetch(:delayed,   true)
-    @always    = opts.fetch(:always,    true)
   end
 
   def generate_message
-    list = ''
-    if @resources
-      list += resources_list
+    res = if @resources
+      resources_list
     elsif @immediate
-      list += immediate_list
+      immediate_list
     elsif @delayed
-      list += delayed_list
+      delayed_list
     else
       'No Collection of Reportable Chefs to Collect on enabled'
     end
     "\n]--(-)--(----------)----------------------(-----------)--(-)--["
     "\n]------------------[  Le (hef (ollection  ]-------------------["
-    "\n]--[-]--[----------]----------------------[-----------]--[-]--[\n\n#{list}"
+    "\n]--[-]--[----------]----------------------[-----------]--[-]--[\n\n#{res}"
   end
 
   def full_name(resource)
-    "#{resource.resource_name}[#{resource.name}]"
+    "#{expand_on(resource.resource_name)}[#{expand_on(resource.name)}]"
   end
 
   def humanize(seconds)
@@ -113,8 +111,9 @@ class DevReporter < Chef::Handler
       resources.sort_by { |_k, v| -v }.each do |resource, run_time|
         Chef::Log.info '%12f  %s' % [run_time, resource]
       end
+
       Chef::Log.info ''
-      Chef::Log.info "Slowest Resource : #{full_name(@max)} (%.6fs)"%[@max_time]
+      # Chef::Log.info "Slowest Resource: #{full_name(@max)} (%.6fs)"%[@max_time]
       Chef::Log.info ''
       Chef::Log.info(generate_message) if run_status.success?
       Chef::Log.info ''

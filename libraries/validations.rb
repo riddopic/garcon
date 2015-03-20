@@ -20,11 +20,8 @@
 # limitations under the License.
 #
 
+require 'uri'
 require 'ipaddr'
-require 'openssl'
-require 'base64'
-require 'securerandom'
-require_relative 'exceptions'
 
 # Resource validations.
 #
@@ -109,11 +106,12 @@ module Garcon
         # @return [undefined]
         #
         # @api private
-        def included(klass)
+        def included(descendant)
           super
-          klass.extend ClassMethods
+          descendant.extend ClassMethods
         end
       end
+
       extend ClassMethods
     end
   end

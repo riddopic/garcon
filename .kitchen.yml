@@ -2,19 +2,34 @@
 #<% require 'kitchen-sync' %>
 ---
 driver:
-  name: vagrant
+  name: docker
+  socket: <%= ENV['DOCKER_HOST'] %>
 
 provisioner:
   name: chef_zero
   require_chef_omnibus: true
 
 platforms:
-  - name: centos-6.6
-    driver_config:
-      box: opscode-centos-6.6
-      box_url: http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-6.6_chef-provisionerless.box
+- name: centos-6
+  driver:
+    image: centos/centos6
+    platform: centos
+  run_list:
+    - recipe[yum]
+
+- name: centos-7
+  driver:
+    image: centos/centos7
+    platform: centos
+  run_list:
+    - recipe[yum]
 
 suites:
-  - name: default
-    run_list:
-      - recipe[test_fixtures::default]
+- name: default
+  run_list:
+    - recipe[test_fixtures::default]
+    - recipe[garcon::default]
+    - recipe[garcon::civilize]
+    - recipe[garcon::development]
+  excludes:
+    - centos-7

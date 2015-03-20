@@ -46,8 +46,9 @@ module Garcon
             actions(name)
           end
           @default_action || (superclass.respond_to?(:default_action) &&
-                              superclass.default_action) ||
-                              :actions.first || :nothing
+                                superclass.default_action) ||
+                                  :actions.first ||
+                                    :nothing
         end
 
         # Mimic the LWRP DSL providing a `action` method
@@ -112,6 +113,7 @@ module Garcon
       # @param [Symbol] method
       #   The method to send to the object.
       #
+      # @return [String]
       def _?(*args, &block)
         if args.empty? && block_given?
           yield self
@@ -143,8 +145,6 @@ module Garcon
       # as updated.
       #
       # @return [Undefined]
-      #
-      # @api public
       def notifying_action(key, &block)
         action key do
           cached_new_resource = new_resource
@@ -172,7 +172,6 @@ module Garcon
       # Use `Chef::DelayedEvaluator` in rousources for easy defaults
       #
       # @return [undefined]
-      # @api private
       def set_or_return(symbol, arg, validation)
         if validation && validation[:default].is_a?(Chef::DelayedEvaluator)
           validation = validation.dup
@@ -185,7 +184,6 @@ module Garcon
     # Set @resource_name automatically
     #
     # @return [undefined]
-    # @api private
     def initialize(*args)
       super
       @resource_name ||= Chef::Mixin::ConvertToClassName.convert_to_snake_case(
@@ -202,8 +200,6 @@ module Garcon
         # @param [Class] descendant
         #
         # @return [undefined]
-        #
-        # @api private
         def included(descendant)
           super
           descendant.extend ClassMethods

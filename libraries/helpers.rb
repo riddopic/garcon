@@ -35,11 +35,20 @@ module Garcon
     include Garcon::Exceptions
     include Chef::Mixin::ShellOut
 
-    # DEPRECATED: A stupid mistake, attributed to lack of sleep.
+    # Return the elapsed time in seconds in a human readable format, so 1283
+    # seconds becomes the more digestible and user friendly 21 minutes and 23
+    # seconds
     #
-    def single_include(recipe)
-      Chef::Log.warn 'This method is DEPRECATED and will removed! Stop using it!'
-      include_recipe recipe
+    def humanize(seconds)
+      [[60, :seconds],
+       [60, :minutes],
+       [24, :hours],
+       [1000, :days]].map { |count, name|
+        if seconds > 0
+          seconds, n = seconds.divmod(count)
+          "#{n.to_i} #{name}"
+        end
+      }.compact.reverse.join(' ')
     end
 
     # Returns a salted PBKDF2 hash of the password.
@@ -50,11 +59,174 @@ module Garcon
     # @return [String]
     #   salted PBKDF2 hash of the password provided.
     #
-    def create_hash(password)
+    def hash_salt(password)
       salt = SecureRandom.base64(24)
       pbkdf2 = OpenSSL::PKCS5::pbkdf2_hmac_sha1(password, salt, 1000, 24)
       Base64.encode64(pbkdf2)
     end
+
+    # Runs a code block, and retries it when an exception occurs. Should the
+    # number of retries be reached without success, the last exception will be
+    # raised.
+    #
+    # @param opts [Hash]
+    #
+    # @option opts [Fixnum] :tries
+    #   number of attempts to retry before raising the last exception
+    #
+    # @option opts [Fixnum] :sleep
+    #   number of seconds to wait between retries, use lambda to exponentially
+    #   increasing delay between retries
+    #
+    # @option opts [Array(Exception)] :on
+    #   the type of exception(s) to catch and retry on
+    #
+    # @option opts [Regex] :matching
+    #   match based on the exception message
+    #
+    # @option opts [Block] :ensure
+    #   ensure a block of code is executed, regardless of whether an exception
+    #   is raised
+    #
+    # @yield [Proc]
+    #   a block that will be run, and if it raises an error, re-run until
+    #   success, or timeout is finally reached
+    #
+    # @raise [Exception]
+    #   last Exception that caused the loop to retry before giving up
+    #
+    # @return [Proc]
+    #   the value of the passed block.
+    #
+    def retrier(options = {}, &_block)
+      tries  = options.fetch(:tries,              4)
+      wait   = options.fetch(:sleep, ->(n) { 4**n })
+      on     = options.fetch(:on,     StandardError)
+      match  = options.fetch(:match,           /.*/)
+      insure = options.fetch(:insure,       proc {})
+
+      retries = 0
+      retry_exception = nil
+
+      begin
+        yield retries, retry_exception
+      rescue *[on] => exception
+        raise unless exception.message =~ match
+        raise if retries + 1 >= tries
+
+        # Interrupt Exception could be raised while sleeping
+        begin
+          sleep wait.respond_to?(:call) ? wait.call(retries) : wait
+        rescue *[on]
+        end
+
+        retries += 1
+        retry_exception = exception
+        retry
+      ensure
+        insure.call(retries)
+      end
+    end
+    module_function :retrier
+
+    # Method usefule for knowing when something is ready. When your block
+    # yields true, execution continues. When your block yields false, keep
+    # trying until it gives up and raises an error.
+    #
+    # @example
+    #   def wait_for_server
+    #     poll(20) do
+    #       begin
+    #         TCPSocket.new(SERVER_IP, SERVER_PORT)
+    #         true
+    #       rescue Exception
+    #         false
+    #       end
+    #     end
+    #   end
+    #
+    # @param [Integer] wait
+    #   seconds number of seconds to poll
+    #
+    # @param [Integer] delay
+    #   seconds to wait after encountering a failure, default is 0.1 seconds
+    #
+    # @yield a block that determines whether polling should continue
+    #
+    # @yield return false if polling should continue
+    #
+    # @yield return true if polling is complete
+    #
+    # @raise [Garcon::PollingError] when polling fails
+    #
+    # @return [Proc]
+    #   the value of the passed block.
+    #
+    def poll(wait = 8, delay = 0.1)
+      try_until = Time.now + wait
+
+      while Time.now < try_until do
+        result = yield
+        return result if result
+        sleep delay
+      end
+      raise TimeoutError
+    end
+    module_function :poll
+
+    # Runs a code block, if an exception occurs wait for some amount of time
+    # then retry until success or a timeout is reached, raising the most
+    # recent exception.
+    #
+    # @param [Integer] seconds
+    #   number of seconds to be patient, default is 8 seconds
+    #
+    # @param [Integer] delay
+    #   seconds to wait after encountering a failure, default is 0.1 seconds
+    #
+    # @yield a block that will be run, and if it raises an error, re-run until
+    #   success, or patience runs out
+    #
+    # @raise [Exception] the most recent Exception that caused the loop to
+    #   retry before giving up.
+    #
+    # @return [Proc]
+    #   the value of the passed block.
+    #
+    def patiently(wait = 8, delay = 0.1)
+      try_until = Time.now + wait
+      failure   = nil
+
+      while Time.now < try_until do
+        begin
+          return yield
+        rescue Exception => e
+          failure = e
+          sleep delay
+        end
+      end
+      raise failure if failure
+    end
+    module_function :patiently
+
+    # Wait the given number of seconds for the block operation to complete.
+    #
+    # @param [Integer] seconds
+    #   number of seconds to wait
+    #
+    # @return [Object]
+    #   result of the block operation
+    #
+    # @raise [Garcon::TimeoutError]
+    #   when the block operation does not complete in the alloted time
+    #
+    def timeout(seconds)
+      thread = Thread.new  { Thread.current[:result] = yield }
+      thread.join(seconds) ? (return thread[:result]) : (raise TimeoutError)
+    ensure
+      Thread.kill(thread) unless thread.nil?
+    end
+    module_function :timeout
 
     # Return a cleanly join URI/URL segments into a cleanly normalized URL
     # that the libraries can use when constructing URIs. URI.join is pure
@@ -71,6 +243,43 @@ module Garcon
       trailingslash = paths[-1][-1] == '/' ? '/' : ''
       paths.map! { |path| path.sub(/^\/+/, '').sub(/\/+$/, '') }
       leadingslash + paths.join('/') + trailingslash
+    end
+
+    # Returns a hash using col1 as keys and col2 as values.
+    #
+    # @example zip_hash([:name, :age, :sex], ['Earl', 30, 'male'])
+    #   => { :age => 30, :name => "Earl", :sex => "male" }
+    #
+    # @param [Array] col1
+    #   Containing the keys.
+    #
+    # @param [Array] col2
+    #   Values for hash.
+    #
+    # @return [Hash]
+    #
+    def zip_hash(col1, col2)
+      col1.zip(col2).inject({}) { |r, i| r[i[0]] = i[1]; r }
+    end
+
+    # Returns true if the current node is a docker container, otherwise false.
+    #
+    # @return [TrueClass, FalseClass]
+    #
+    def docker?
+      ::File.exist?('/.dockerinit') || ::File.exist?('/.dockerenv')
+    end
+
+    # Returns true if the current node has selinux enabled, otherwise false.
+    #
+    # @return [TrueClass, FalseClass]
+    #
+    def selinux?
+      if installed?('libselinux-utils')
+        Mixlib::ShellOut.new('getenforce').run_command.stdout != "Disabled\n"
+      else
+        false
+      end
     end
 
     # Finds a command in $PATH
@@ -91,66 +300,6 @@ module Garcon
           return possible if ::File.executable?(possible)
         end
         nil
-      end
-    end
-
-    # Returns a hash using col1 as keys and col2 as values.
-    #
-    # @example zip_hash([:name, :age, :sex], ['Earl', 30, 'male'])
-    #   => { :age => 30, :name => "Earl", :sex => "male" }
-    #
-    # @param [Array] col1
-    #   Containing the keys.
-    #
-    # @param [Array] col2
-    #   Values for hash.
-    #
-    # @return [Hash]
-    #
-    def zip_hash(col1, col2)
-      col1.zip(col2).inject({}) { |r, i| r[i[0]] = i[1]; r }
-    end
-
-    # Throws water in the face of a lazy attribute, returns the unlazy value,
-    # good for nothing long-haird hippy.
-    #
-    # @param [Object] instance
-    #   instance to instance_eval
-    #
-    # @param [Array] args
-    #   arguments to pass into the block
-    #
-    # @return [Proc]
-    #
-    def lazy_eval(instance, *args)
-      if instance && instance.is_a?(Chef::DelayedEvaluator)
-        if arity == 0
-          instance.instance_eval(&self)
-        else
-          instance.instance_exec(*args, &self)
-        end
-      else
-      arity == 0 ? call : (arity == 1) ? call(instance) : call(instance, *args)
-      end
-    end
-
-    # Returns true if the current node is a docker container, otherwise false.
-    #
-    # @return [TrueClass, FalseClass]
-    #
-    def docker?
-      ::File.exist?('/.dockerinit') || ::File.exist?('/.dockerenv')
-    end
-
-    # Returns true if the current node has selinux enabled, otherwise false.
-    #
-    # @return [TrueClass, FalseClass]
-    #
-    def selinux?
-      if installed?('libselinux-utils')
-        Mixlib::ShellOut.new('getenforce').run_command.stdout != "Disabled\n"
-      else
-        false
       end
     end
 
@@ -224,158 +373,6 @@ module Garcon
       path.sub(%r{^/}, '').tr('', '')
     end
 
-    # Runs a code block, and retries it when an exception occurs. Should the
-    # number of retries be reached without success, the last exception will be
-    # raised.
-    #
-    # @param opts [Hash]
-    # @option opts [Fixnum] :tries
-    #   number of attempts to retry before raising the last exception
-    # @option opts [Fixnum] :sleep
-    #   number of seconds to wait between retries, use lambda to exponentially
-    #   increasing delay between retries
-    # @option opts [Array(Exception)] :on
-    #   the type of exception(s) to catch and retry on
-    # @option opts [Regex] :matching
-    #   match based on the exception message
-    # @option opts [Block] :ensure
-    #   ensure a block of code is executed, regardless of whether an exception
-    #   is raised
-    #
-    # @yield [Proc]
-    #   a block that will be run, and if it raises an error, re-run until
-    #   success, or timeout is finally reached
-    #
-    # @raise [Exception]
-    #   the most recent Exception that caused the loop to retry before giving up
-    #
-    # @return [Proc]
-    #   the value of the passed block.
-    #
-    def retrier(options = {}, &_block)
-      tries  = options.fetch(:tries,              4)
-      wait   = options.fetch(:sleep, ->(n) { 4**n })
-      on     = options.fetch(:on,     StandardError)
-      match  = options.fetch(:match,           /.*/)
-      insure = options.fetch(:insure,       proc {})
-
-      retries = 0
-      retry_exception = nil
-
-      begin
-        yield retries, retry_exception
-      rescue *[on] => exception
-        raise unless exception.message =~ match
-        raise if retries + 1 >= tries
-
-        begin
-          sleep wait.respond_to?(:call) ? wait.call(retries) : wait
-        rescue *[on]
-        end
-
-        retries += 1
-        retry_exception = exception
-        retry
-      ensure
-        insure.call(retries)
-      end
-    end
-    module_function :retrier
-
-    # Runs a code block, if an exception occurs wait for some amount of time
-    # then retry until success or a timeout is reached, raising the most recent
-    # exception.
-    #
-    # @example
-    #   def wait_for_server
-    #     poll(20) do
-    #       begin
-    #         TCPSocket.new(SERVER_IP, SERVER_PORT)
-    #         true
-    #       rescue Exception
-    #         false
-    #       end
-    #     end
-    #   end
-    #
-    # @param [Ingeger] wait
-    #   number of seconds to be patient and wait, default is 8 seconds
-    # @param [Ingeger] delay
-    #   seconds to hesitate after encountering a failure, default is 0.1 seconds
-    #
-    # @yield a block that determines whether polling should continue
-    # @yield return false if polling should continue
-    # @yield return true if polling is complete
-    #
-    # @raise [Garcon::PollingError] when polling fails
-    #
-    # @return the return value of the passed block
-    #
-    def poll(wait = 8, delay = 0.1)
-      try_until = Time.now + wait
-      failure   = nil
-
-      while Time.now < try_until do
-        result = yield
-        return result if result
-        sleep delay
-      end
-      raise TimeoutError
-    end
-    module_function :poll
-
-    # Runs a code block, if an exception occurs wait for some amount of time
-    # then retry until success or a timeout is reached, raising the most recent
-    # exception.
-    #
-    # @param [Ingeger] wait
-    #   number of seconds to be patient and wait, default is 8 seconds
-    # @param [Ingeger] delay
-    #   seconds to hesitate after encountering a failure, default is 0.1 seconds
-    #
-    # @yield a block that will be run, and if it raises an error, re-run until
-    # success, or patience runs out
-    #
-    # @raise [Exception] the most recent Exception that caused the loop to retry
-    # before giving up.
-    #
-    # @return the value of the passed block
-    #
-    def patiently(wait = 8, delay = 0.1)
-      try_until = Time.now + wait
-      failure   = nil
-
-      while Time.now < try_until do
-        begin
-          return yield
-        rescue Exception => e
-          failure = e
-          sleep delay
-        end
-      end
-      raise failure if failure
-    end
-    module_function :patiently
-
-    # Wait the given number of seconds for the block operation to complete.
-    #
-    # @param [Integer] seconds
-    #   number of seconds to wait
-    #
-    # @return [Object]
-    #   result of the block operation
-    #
-    # @raise [Garcon::TimeoutError]
-    #   when the block operation does not complete in the alloted time
-    #
-    def timeout(seconds)
-      thread = Thread.new  { Thread.current[:result] = yield }
-      thread.join(seconds) ? (return thread[:result]) : (raise TimeoutError)
-    ensure
-      Thread.kill(thread) unless thread.nil?
-    end
-    module_function :timeout
-
     # Retrieve the version number of the cookbook in the run list.
     #
     # @param name [String]
@@ -441,7 +438,18 @@ module Garcon
       end
     end
 
-    # Shortcut to return cache path.
+    # Shortcut to return cache path, if you pass in a file it will return the
+    # file with the cache path.
+    #
+    # @example
+    #   file_cache_path
+    #     => "/var/chef/cache/"
+    #
+    #   file_cache_path 'patch.tar.gz'
+    #     => "/var/chef/cache/patch.tar.gz"
+    #
+    #   file_cache_path "#{node[:name]}-backup.tar.gz"
+    #     => "/var/chef/cache/c20d24209cc8-backup.tar.gz"
     #
     # @param [String] args
     #   name of file to return path with file
@@ -503,9 +511,9 @@ module Garcon
       find_matching(:role, role, single, block)
     end
 
-    alias_method :find_matching,     :find_by
-    alias_method :find_matching_role :find_by_role
-    alias_method :find_matching_tag, :find_by_tag
+    alias_method :find_matching,      :find_by
+    alias_method :find_matching_role, :find_by_role
+    alias_method :find_matching_tag,  :find_by_tag
 
     # Amazingly and somewhat surprisingly comma separate a number
     #
@@ -578,179 +586,5 @@ module Garcon
     Chef::Recipe.send(:include,   Garcon::Helpers)
     Chef::Resource.send(:include, Garcon::Helpers)
     Chef::Provider.send(:include, Garcon::Helpers)
-  end
-end
-
-# Add contains? method to string
-#
-class String
-  # Search a text file for a matching string
-  #
-  # @return [TrueClass, FalseClass]
-  #   True if the file is present and a match was found, otherwise returns
-  #   false if file does not exist and/or does not contain a match
-  #
-  def contains?(str)
-    return false unless ::File.exist?(self)
-    ::File.open(self, &:readlines).collect { |l| return true if l.match(str) }
-    false
-  end
-end
-
-class Chef
-  class Node
-    class AttributeDoesNotExistError < StandardError
-      def initialize(keys, key)
-        hash = keys.map { |key| "['#{key}']" }
-
-        super <<-EOH
-No attribute `node#{hash.join}' exists on
-the current node. Specifically the `#{key}' attribute is not
-defined. Please make sure you have spelled everything correctly.
-EOH
-      end
-    end
-
-    # Boolean to check if a recipe is loaded in the run list.
-    #
-    # @param [String] recipe
-    #   the command to find
-    #
-    # @return [TrueClass, FalseClass]
-    #   true if the command is found in the path, false otherwise
-    #
-    def has_recipe?(recipe)
-      loaded_recipes.include?(with_default(recipe))
-    end
-
-    # Determine if the current node is in the given Chef environment
-    # (or matches the given regular expression).
-    #
-    # @param [String, Regex] environment
-    #
-    # @return [Boolean]
-    #
-    def in?(environment)
-      environment === chef_environment
-    end
-
-    # Safely fetch a deeply nested attribute by specifying a list of keys,
-    # bypassing Ruby's Hash notation. This method swallows +NoMethodError+
-    # exceptions, avoiding the most common error in Chef-land.
-    #
-    # This method will return +nil+ if any deeply nested key does not exist.
-    #
-    # @see [Node#deep_fetch!]
-    #
-    def deep_fetch(*keys)
-      deep_fetch!(*keys)
-    rescue NoMethodError, AttributeDoesNotExistError
-      nil
-    end
-
-    # Deeply fetch a node attribute by specifying a list of keys, bypassing
-    # Ruby's Hash notation.
-    #
-    # This method will raise any exceptions, such as
-    # +undefined method `[]' for nil:NilClass+, just as if you used the native
-    # attribute notation. If you want a safely vivified hash, see {deep_fetch}.
-    #
-    # @example Fetch a deeply nested key
-    #   node.deep_fetch(:foo, :bar, :zip) #=> node['foo']['bar']['zip']
-    #
-    # @param [Array<String, Symbol>] keys
-    #   the list of keys to kdeep fetch
-    #
-    # @return [Object]
-    #
-    def deep_fetch!(*keys)
-      keys.map!(&:to_s)
-      keys.inject(attributes.to_hash) do |hash, key|
-        if hash.key?(key)
-          hash[key]
-        else
-          raise AttributeDoesNotExistError.new(keys, key)
-        end
-      end
-    end
-
-    private #   P R O P R I E T À   P R I V A T A   Vietato L'accesso
-
-    # Automatically appends "::default" to recipes that need them.
-    #
-    # @param [String] recipe
-    #
-    # @return [String]
-    #
-    def with_default(recipe)
-      name.include?('::') ? name : "#{recipe}::default"
-    end
-
-    # The list of loaded recipes on the Chef run (normalized)
-    #
-    # @return [Array<String>]
-    #
-    def loaded_recipes
-      node.run_context.loaded_recipes.map { |name| with_default(name) }
-    end
-
-    # The namespace options.
-    #
-    # @return [Hash]
-    #
-    def namespace_options
-      @namespace_options ||= { precedence: default }
-    end
-
-    # The current namespace. This is actually a reverse-ordered array that
-    # vivifies the correct hash.#
-    #
-    # @return [Array<String>]
-    #
-    def current_namespace
-      @current_namespace ||= []
-    end
-
-    # The vivified (fake-filled) hash. It is assumed that the default value
-    # for non-existent keys in the hash is a new, empty hash.
-    #
-    # @return [Hash<String, Hash>]
-    #
-    def vivified
-      current_namespace.inject(namespace_options[:precedence]) do |hash, item|
-        hash[item] ||= {}
-        hash[item]
-      end
-    end
-  end
-end
-
-require 'mixlib/log/formatter'
-
-module Mixlib
-  module Log
-    class Formatter < Logger::Formatter
-      def call(severity, time, progname, msg)
-        if @@show_time
-          reset = "\033[0m"
-          color = case severity
-          when 'FATAL'
-            "\033[1;41m" # Bright Red
-          when 'ERROR'
-            "\033[31m"   # Red
-          when 'WARN'
-            "\033[33m"   # Yellow
-          when 'DEBUG'
-            "\033[2;37m" # Faint Gray
-          else
-            reset        # Normal
-          end
-          sprintf "[%s] #{color}%s#{reset}: %s\n",
-                  time.iso8601, severity, msg2str(msg)
-        else
-          sprintf "%s: %s\n", severity, msg2str(msg)
-        end
-      end
-    end
   end
 end
