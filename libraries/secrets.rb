@@ -264,7 +264,7 @@ module Garcon
     # @return [String] tmp_file
     # @api private
     def secret_tmp(tmp_dir = Dir.tmpdir)
-      Tempfile.new(random_seed), tmp_dir).path.freeze
+      Tempfile.new(random_seed, tmp_dir).path.freeze
     end
 
     # @return [String] random_seed

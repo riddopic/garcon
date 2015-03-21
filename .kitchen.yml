@@ -31,5 +31,6 @@ suites:
     - recipe[garcon::default]
     - recipe[garcon::civilize]
     - recipe[garcon::development]
+    - recipe[test_fixtures::pry]
   excludes:
     - centos-7

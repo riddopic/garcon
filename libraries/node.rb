@@ -34,6 +34,8 @@ class Chef
     def has_recipe?(recipe)
       loaded_recipes.include?(with_default(recipe))
     end
+    alias_method :include_recipe?,  :has_recipe?
+    alias_method :includes_recipe?, :has_recipe?
 
     # Determine if the current node is in the given Chef environment
     # (or matches the given regular expression).
