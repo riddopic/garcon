@@ -20,22 +20,6 @@
 # limitations under the License.
 #
 
-include_recipe 'chef_handler'
+include_recipe 'chef_handler::default'
 
-concurrent :run do
-  block { Chef::Log.info 'Thread-pool startup' }
-end.run_action(:start)
-
-concurrent :prerequisite do
-  block { monitor.synchronize { prerequisite } }
-end
-
-node.override[:'build-essential'][:compile_time] = true
-monitor.synchronize { include_recipe 'build-essential::default' }
-
-chef_gem('hoodie') { action :nothing }.run_action(:install)
-require 'hoodie' unless defined?(Hoodie)
-
-Chef::Recipe.send(:include,   Hoodie)
-Chef::Resource.send(:include, Hoodie)
-Chef::Provider.send(:include, Hoodie)
+node.default![:yum][:epel][:mirrorlist] = nil

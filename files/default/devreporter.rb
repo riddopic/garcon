@@ -9,28 +9,11 @@ class DevReporter < Chef::Handler
   attr_reader :resources, :immediate, :delayed, :always
 
   def initialize(opts = {})
-    @resources = opts.fetch(:resources, true)
-    @immediate = opts.fetch(:immediate, true)
-    @delayed   = opts.fetch(:delayed,   true)
-  end
-
-  def generate_message
-    res = if @resources
-      resources_list
-    elsif @immediate
-      immediate_list
-    elsif @delayed
-      delayed_list
-    else
-      'No Collection of Reportable Chefs to Collect on enabled'
-    end
-    "\n]--(-)--(----------)----------------------(-----------)--(-)--["
-    "\n]------------------[  Le (hef (ollection  ]-------------------["
-    "\n]--[-]--[----------]----------------------[-----------]--[-]--[\n\n#{res}"
+    @data = opts[:data]
   end
 
   def full_name(resource)
-    "#{expand_on(resource.resource_name)}[#{expand_on(resource.name)}]"
+    "#{resource.resource_name}[#{resource.name}]"
   end
 
   def humanize(seconds)
@@ -45,41 +28,14 @@ class DevReporter < Chef::Handler
     end.compact.reverse.join(' ')
   end
 
-  def __resources_list__
-    rcrcar = run_context.resource_collection.all_resources
-    rcrcar.collect { |res| "#{res.resource_name}[#{res.name}] =>\n" }
-  end
-
-  def resources_list
-    list = run_context.resource_collection.all_resources.collect do |res|
-      "#{res.resource_name}[#{res.name}] =>\n"
-    end
-    "\n** Resource List **\n\n#{__resources_list__}"
-  end
-
-  def __immediate_list__
-    rcinc = run_context.immediate_notification_collection
-    rcinc.collect { |notify, value| "#{notify} =>\n  #{value.join("\n  ")}\n" }
-  end
-
-  def immediate_list
-    "\n** Immediate Notification List **\n\n#{__immediate_list__}"
-  end
-
-  def __delayed_list__
-    rcdnc = run_context.delayed_notification_collection
-    rcdnc.collect { |notify, value| "#{notify} =>\n  #{value.join("\n  ")}" }
-  end
-
-  def delayed_list
-    "\n** Delayed Notifications List **\n\n#{__delayed_list__}"
-  end
-
   def report
     if run_status.success?
       cookbooks = Hash.new(0)
       recipes   = Hash.new(0)
       resources = Hash.new(0)
+      run_time  = humanize(run_status.elapsed_time)
+      updates   = run_status.updated_resources.length
+      total     = run_status.all_resources.length
 
       all_resources.each do |r|
         cookbooks[r.cookbook_name]                      += r.elapsed_time
@@ -90,33 +46,49 @@ class DevReporter < Chef::Handler
       @max_time = all_resources.max_by { |r| r.elapsed_time      }.elapsed_time
       @max      = all_resources.max_by { |r| full_name(r).length }
 
-      Chef::Log.info ''
-      Chef::Log.info 'Elapsed_time  Cookbook'
-      Chef::Log.info '------------  ----------------' \
-                     ' - - - - - - - - - - -  -  -  -  -  -  -  -  -  -'
-      cookbooks.sort_by { |_k, v| -v }.each do |cookbook, run_time|
-        Chef::Log.info '%12f  %s' % [run_time, cookbook]
+      # Droping puts because mash grinder faceplanted logging changes.
+      puts <<-EOF
+                              .:  ;:. .:;S;:. .:;.;:. .:;S;:. .:;S;:.
+                              S   ' S S  S    S  S    S     S  /
+                              `:;S;:' `:;S;:' `:;S;:' `:;S;:' `:;S;:'
+              .g8"""bgd
+            .dP'     `M
+            dM'       `  ,6"Yb.  `7Mb,od8 ,p6"bo   ,pW"Wq.`7MMpMMMb.
+            MM          8)   MM    MM' "'6M'  OO  6W'   `Wb MM    MM
+            MM.    `7MMF',pm9MM    MM    8M       8M     M8 MM    MM
+            `Mb.     MM 8M   MM    MM    YM.    , YA.   ,A9 MM    MM
+              `"bmmmdPY `Moo9^Yo..JMML.   YMbmd'   `Ybmd9'.JMML  JMML.
+                                            bog
+                                             od
+      EOF
+      puts 'Elapsed Time  Cookbook'
+      puts '------------  -------------------------------------------'
+      cookbooks.sort_by { |k, v| -v }.each do |cookbook, run_time|
+        puts '%19f  %s' % [run_time, cookbook]
       end
-      Chef::Log.info ''
-      Chef::Log.info 'Elapsed Time  Rec'
-      Chef::Log.info '------------  ----------------' \
-                     ' - - - - - - - - - - -  -  -  -  -  -  -  -  -  -'
-      recipes.sort_by { |_k, v| -v }.each do |recipe, run_time|
-        Chef::Log.info '%12f  %s' % [run_time, recipe]
+      puts ''
+      puts 'Elapsed Time  Recipe'
+      puts '------------  -------------------------------------------'
+      recipes.sort_by { |k, v| -v }.each do |recipe, run_time|
+        puts '%19f  %s' % [run_time, recipe]
       end
-      Chef::Log.info ''
-      Chef::Log.info 'Elapsed_time  Resource'
-      Chef::Log.info '------------  ----------------' \
-                     ' - - - - - - - - - - -  -  -  -  -  -  -  -  -  -'
-      resources.sort_by { |_k, v| -v }.each do |resource, run_time|
-        Chef::Log.info '%12f  %s' % [run_time, resource]
+      puts ''
+      puts 'Elapsed Time  Resource'
+      puts '------------  -------------------------------------------'
+      resources.sort_by { |k, v| -v }.each do |resource, run_time|
+        puts '%19f  %s' % [run_time, resource]
       end
-
-      Chef::Log.info ''
-      # Chef::Log.info "Slowest Resource: #{full_name(@max)} (%.6fs)"%[@max_time]
-      Chef::Log.info ''
-      Chef::Log.info(generate_message) if run_status.success?
-      Chef::Log.info ''
+      puts '+------------------------------------------------------------------------------+'
+      puts ''
+      puts "Chef Run Completed in #{run_time} on #{node.name}. Updated " \
+           "#{updates} of #{total} resources."
+      puts "Slowest Resource: #{full_name(@max)} (%.6fs)"%[@max_time]
+      puts ''
+      puts "#{@data}"
+      puts ''
+    elsif run_status.failed?
+      puts "Chef Run FAILED in #{run_time} on #{node.name} with the exception:"
+      puts run_status.formatted_exception
     end
   end
 end

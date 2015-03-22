@@ -20,75 +20,38 @@
 # limitations under the License.
 #
 
-require_relative 'validations'
-require_relative 'zen_master'
-require_relative 'exceptions'
-require_relative 'resource_helpers'
+#        ____   ____  ____      __   ___   ____   __
+#       /    T /    T|    \    /  ] /   \ |    \ |  T
+#      Y   __jY  o  ||  D  )  /  / Y     Y|  _  Y|  |
+#      |  T  ||     ||    /  /  /  |  O  ||  |  ||__j
+#      |  l_ ||  _  ||    \ /   \_ |     ||  |  | __
+#      |     ||  |  ||  .  Y\     |l     !|  |  ||  T
+#      l___,_jl__j__jl__j\_j \____j \___/ l__j__jl__j
 
-# Include hooks to extend with class and instance methods.
-#
+require_relative '../files/lib/garcon'
+
 module Garcon
-  # Include hooks to extend Resource with class and instance methods.
-  #
-  module Resource
-    include Validations
-    include ZenMaster
+  # Cryptor for this session.
+  Garcon.crypto.password = SecureRandom.base64(18)
+  Garcon.crypto.salt     = Crypto.salted_hash(Garcon.crypto.password)[:salt]
 
-    def self.included(descendant)
-      super
-
-      def descendant.synthesize
-        include Garcon::Resource::Synthesize
-      end
-    end
+  def monitor
+    @monitor ||= Monitor.new
   end
-
-  # Include hooks to extend Provider with class and instance methods.
-  #
-  module Provider
-    include ZenMaster
-  end
-
-  # Extends a descendant with class and instance methods
-  #
-  # @param [Class] descendant
-  #
-  # @return [undefined]
-  #
-  # @api private
-  def self.included(descendant)
-    super
-    descendant.class_exec { include Garcon::Exceptions }
-    if descendant < Chef::Resource
-      descendant.class_exec { include Garcon::Resource }
-    elsif descendant < Chef::Provider
-      descendant.class_exec { include Garcon::Provider }
-    end
-  end
-  private_class_method :included
 end
 
-# Callable form to allow passing in options:
-#   include Garcon(synthesize: true)
+# Cache the node object for profit and gross revenue margins.
 #
-def Garcon(options = {})
-  if options.is_a?(Class)
-    options = { parent: options }
+class Chef::Resource::NodeCache < Chef::Resource
+  include Garcon(blender: true)
+  attribute(:name,  kind_of: String, name_attribute: true)
+  attribute(:cache, kinf_of: Hash,   default: lazy { node })
+  action(:run) do
+    Garcon.config.stash.load(node: new_resource.node)
   end
-
-  anonymous_module = Module.new
-
-  def anonymous_module.name
-    super || 'Garcon'
-  end
-
-  anonymous_module.define_singleton_method(:included) do |klass|
-    super(klass)
-    klass.class_exec { include Garcon }
-    if klass < Chef::Resource
-      klass.synthesize if options[:synthesize]
-    end
-  end
-
-  anonymous_module
 end
+
+Chef::Recipe.send(:include,   Garcon)
+Chef::Resource.send(:include, Garcon)
+Chef::Provider.send(:include, Garcon)
+

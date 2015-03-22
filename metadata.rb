@@ -14,5 +14,5 @@ supports 'redhat',      '>= 5.10'
 supports 'scientific',  '>= 5.10'
 
 depends 'chef_handler'
-depends 'build-essential'
+depends 'yum-epel'
 depends 'yum'

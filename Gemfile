@@ -2,6 +2,8 @@
 
 source 'https://rubygems.org'
 
+gemspec
+
 gem 'serverspec'
 
 group :development do
@@ -30,7 +32,6 @@ gem 'test-kitchen'
 gem 'kitchen-ec2'
 gem 'kitchen-vagrant'
 gem 'kitchen-docker'
-gem 'hoodie', '>= 0.4.3'
 
 group :plugins do
   gem 'vagrant-berkshelf'

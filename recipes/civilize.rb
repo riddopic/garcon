@@ -20,6 +20,8 @@
 # limitations under the License.
 #
 
+include_recipe 'yum-epel::default'
+
 node[:garcon][:civilize][:docker].each do |pkg|
   package pkg do
     only_if { docker? }
@@ -35,7 +37,7 @@ end
 
 execute 'iptables -F' do
   ignore_failure true
-  only_if { node[:garcon][:civilize][:iptables] }
+  only_if { node[:garcon][:civilize][:iptables] && !docker? }
   action   :run
 end
 

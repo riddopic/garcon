@@ -27,24 +27,43 @@ include_recipe 'chef_handler'
 reporter = ::File.join(node[:chef_handler][:handler_path], 'devreporter.rb')
 
 cookbook_file reporter do
-  owner  'root'
-  group  'root'
-  mode    00600
-  action :create
+  owner      'root'
+  group      'root'
+  mode        00600
+  action     :create
 end
 
 chef_handler 'DevReporter' do
-  source   reporter
-  supports report: true
-  action  :enable
+  source      reporter
+  arguments   data: Faker::Hacker.say_something_smart
+  supports    report: true
+  action     :enable
 end
 
 if node[:garcon][:civilize][:ruby] && !defined?(Pry)
-  chef_gem 'pry'
-  Chef::Recipe.send(:require, 'pry')
+  chef_gem 'pry' do
+    compile_time(false) if respond_to?(:compile_time)
+    notifies :create, 'ruby_block[pry]', :immediately
+    action   :install
+  end
+
+  ruby_block :pry do
+    block  { Chef::Recipe.send(:require, 'pry') }
+    action   :create
+  end
 end
 
 if node[:garcon][:civilize][:ruby] && !defined?(AwesomePrint)
-  chef_gem 'awesome_print'
-  Chef::Recipe.send(:require, 'ap')
+  chef_gem 'awesome_print' do
+    compile_time(false) if respond_to?(:compile_time)
+    notifies :create, 'ruby_block[awesome_print]', :immediately
+    action   :install
+  end
+
+  ruby_block :awesome_print do
+    block  { Chef::Recipe.send(:require, 'ap') }
+    action   :nothing
+  end
 end
+
+#  T H I S   R E C I P E   I S   F O R   D E V E L O P M E N T   O N L Y !

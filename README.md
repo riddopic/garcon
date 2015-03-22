@@ -36,8 +36,6 @@ the specific version numbers):
 
 * [chef_handler](https://supermarket.getchef.com/cookbooks/chef_handler) -
   Distribute and enable Chef Exception and Report handlers.
-* [build-essential](https://supermarket.getchef.com/cookbooks/build-essential) -
-  Installs packages required for compiling C software from source.
 * [yum](https://supermarket.getchef.com/cookbooks/yum) - The Yum cookbook
   exposes the yum_repository resources that allows a user to both control global
   behavior and make individual Yum repositories available for use.
@@ -138,7 +136,7 @@ The syntax for using the `download` resource in a recipe is as follows:
       ...
       action :action # see actions section below
     end
-    
+
 Where:
 
   * `download` tells the chef-client to use the `Chef::Provider::Download`
@@ -158,7 +156,7 @@ For example:
 
 #### Actions
 
-  * `:create`: Default. Use to create a file. If a file already exists (but does 
+  * `:create`: Default. Use to create a file. If a file already exists (but does
     not match), use to update that file to match.
   * `:create_if_missing`: Use to create a file only if the file does not exist.
     (When the file exists, nothing happens.)
@@ -176,7 +174,7 @@ For example:
     When the local file matches the checksum, it will not be downloaded.
   * `connections`: Download a file using N connections. If more than N URIs are
     given, first N URIs are used and remaining URIs are used for backup. If less
-    than N URIs are given, those URIs are used more than once so that N 
+    than N URIs are given, those URIs are used more than once so that N
     connections total are made simultaneously. Default: 5.
   * `group`: A string or ID that identifies the group owner by group name. If
     this value is not specified, existing groups will remain unchanged and new
@@ -191,18 +189,18 @@ For example:
     mask value. For example, if the umask on a system is "022", the chef-client
     would use the default value of "0755".
   * `owner`: A string or ID that identifies the group owner by user name. If
-    this value is not specified, existing owners will remain unchanged and new 
+    this value is not specified, existing owners will remain unchanged and new
     owner assignments will use the current user (when necessary).
-  * `path`: The full path to the file, including the file name and its 
+  * `path`: The full path to the file, including the file name and its
     extension. Default value: the name of the resource block.
   * `source`: name attribute. The location (URI) of the source file. This value
     may also specify HTTP (http://), FTP (ftp://), or local (file://) source
     file locations.
-    
+
 #### Examples
 
-The following examples demonstrate various approaches for using resources in 
-recipes. If you want to see examples of how Chef uses resources in recipes, take 
+The following examples demonstrate various approaches for using resources in
+recipes. If you want to see examples of how Chef uses resources in recipes, take
 a closer look at the cookbooks that Chef authors and maintains: https://
 github.com/opscode-cookbooks.
 
@@ -230,7 +228,7 @@ github.com/opscode-cookbooks.
       end
       notifies :create, 'download[http://example.com/file.png]', :immediately
     end
-    
+
 ##### Install a file from a remote location using bash
 
 The following is an example of how to install the foo123 module for Nginx. This
@@ -240,7 +238,7 @@ the following:
   * Declares three variables;
   * Gets the Nginx file from a remote location;
   * Installs the file to the path specified by the `src_path` variable.
-  
+
 The following code sample is similar to the `upload_progress_module` recipe in
 the [nginx](https://github.com/opscode-cookbooks/nginx) cookbook.
 
@@ -249,7 +247,7 @@ the [nginx](https://github.com/opscode-cookbooks/nginx) cookbook.
     extract_path = ::File.join(Chef::Config[:file_cache_path],
       'nginx_foo123_module', node[:nginx][:foo123][:checksum]
     )
-    
+
     download src_path do
       source node[:nginx][:foo123][:url]
       checksum node[:nginx][:foo123][:checksum]
@@ -257,7 +255,7 @@ the [nginx](https://github.com/opscode-cookbooks/nginx) cookbook.
       group 'root'
       mode 00644
     end
-    
+
     bash 'extract module' do
       cwm ::File.dirname(src_path)
       code <<-CODE
@@ -267,7 +265,7 @@ the [nginx](https://github.com/opscode-cookbooks/nginx) cookbook.
       CODE
       not_if { ::File.exist?(extract_path) }
     end
-    
+
 ### zip_file
 
 This resource provides a pure-ruby implementation for managing zip files. Be
@@ -289,7 +287,7 @@ Where:
   * `zip_file` tells the chef-client to use the `Chef::Provider::ZipFile`
     provider during the chef-client run;
   * `name` is the name of the resource block; when the `path` attribute is not
-    specified as part of a recipe, `name` is also the path where files will be 
+    specified as part of a recipe, `name` is also the path where files will be
     (un)zipped to;
   * `attribute` is zero (or more) of the attributes that are available for this
     resource;
@@ -323,18 +321,18 @@ For example:
     would use the default value of "0755".
   * `overwrite`: force an overwrite of the files if they already exist.
   * `owner`: A string or ID that identifies the group owner by user name. If
-    this value is not specified, existing owners will remain unchanged and new 
+    this value is not specified, existing owners will remain unchanged and new
     owner assignments will use the current user (when necessary).
   * `path`: name attribute. The path where files will be (un)zipped to.
   * `remove_after`: If the zip file should be removed once it has been unzipped.
-    Default is false. 
+    Default is false.
   * `source`: The source of the zip file (either a URI or local
     path) for :unzip, or directory to be zipped for :zip.
 
 #### Examples
 
-The following examples demonstrate various approaches for using resources in 
-recipes. If you want to see examples of how Chef uses resources in recipes, take 
+The following examples demonstrate various approaches for using resources in
+recipes. If you want to see examples of how Chef uses resources in recipes, take
 a closer look at the cookbooks that Chef authors and maintains: https://
 github.com/opscode-cookbooks.
 
@@ -416,7 +414,7 @@ The Rakefile ships with a number of tasks, each of which can be ran individually
     rake readme                      # Generate README.md from _README.md.erb
     rake rubocop                     # Run RuboCop
     rake rubocop:auto_correct        # Auto-correct RuboCop offenses
-    rake test                        # Run all tests except `kitchen` / Run 
+    rake test                        # Run all tests except `kitchen` / Run
                                      # kitchen integration tests
     rake yard                        # Generate YARD Documentation
 
