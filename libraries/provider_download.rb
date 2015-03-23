@@ -27,8 +27,6 @@ class Chef::Provider::Download < Chef::Provider
   include Chef::Mixin::Checksum
   include Garcon
 
-  provides :download, os: 'linux'
-
   def initialize(new_resource, run_context)
     super
     do_prerequisite unless installed?('aria2c')

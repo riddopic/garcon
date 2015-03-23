@@ -26,8 +26,6 @@ class Chef::Provider::ZipFile < Chef::Provider
   include Chef::Mixin::EnforceOwnershipAndPermissions
   include Garcon
 
-  provides :zip_file, os: 'linux'
-
   # Boolean indicating if WhyRun is supported by this provider.
   #
   # @return [TrueClass, FalseClass]

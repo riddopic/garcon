@@ -234,7 +234,7 @@ module Garcon
   end
 
   unless Chef::Recipe.ancestors.include?(Garcon::Helpers)
-    Chef::Recipe.send(:include, Garcon::Helpers)
+    Chef::Recipe.send(:include,   Garcon::Helpers)
     Chef::Resource.send(:include, Garcon::Helpers)
     Chef::Provider.send(:include, Garcon::Helpers)
   end

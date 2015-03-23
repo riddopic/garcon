@@ -25,8 +25,6 @@ require_relative 'pool'
 class Chef::Provider::Concurrent < Chef::Provider
   include Garcon
 
-  provides :concurrent, os: 'linux'
-
   def initialize(new_resource, run_context)
     super(new_resource, run_context)
   end
@@ -82,8 +80,8 @@ class Chef::Provider::Concurrent < Chef::Provider
       converge_by "#{job}: Concurrent converge for #{new_resource.name}" do
         begin
           saved_run_context = @run_context
-          temp_run_context = @run_context.dup
-          @run_context = temp_run_context
+          temp_run_context  = @run_context.dup
+          @run_context      = temp_run_context
           @run_context.resource_collection = Chef::ResourceCollection.new
 
           return_value = instance_eval(&@new_resource.block)
