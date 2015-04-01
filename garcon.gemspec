@@ -32,7 +32,7 @@ Gem::Specification.new do |gem|
   gem.require_paths    = [ 'lib' ]
   gem.files            = `git ls-files`.split("\n")
   gem.test_files       = `git ls-files -- {spec}/*`.split("\n")
-  gem.extra_rdoc_files = %w[LICENSE.md README.md]
+  gem.extra_rdoc_files = %w[LICENSE README.md]
 
   gem.add_dependency('chef',     '>= 11.8.0')
   gem.add_dependency('hitimes')
@@ -56,6 +56,17 @@ Gem::Specification.new do |gem|
   gem.add_dependency('fuubar',     '~> 2.0')
   gem.add_dependency('simplecov',  '~> 0.9')
   gem.add_dependency('foodcritic', '~> 4.0')
+  gem.add_dependency('serverspec')
+  gem.add_dependency('inch')
+  gem.add_dependency('yardstick')
+  gem.add_dependency('guard')
+  gem.add_dependency('guard-shell')
+  gem.add_dependency('guard-yard')
+  gem.add_dependency('guard-rubocop')
+  gem.add_dependency('guard-foodcritic')
+  gem.add_dependency('guard-kitchen')
+  gem.add_dependency('guard-rspec')
+  gem.add_dependency('ruby_gntp')
 
   # Integration gems
   gem.add_dependency('test-kitchen', '~> 1.3')

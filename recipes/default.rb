@@ -21,5 +21,3 @@
 #
 
 include_recipe 'chef_handler::default'
-
-node.default![:yum][:epel][:mirrorlist] = nil
