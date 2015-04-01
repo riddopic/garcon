@@ -54,4 +54,3 @@ end
 Chef::Recipe.send(:include,   Garcon)
 Chef::Resource.send(:include, Garcon)
 Chef::Provider.send(:include, Garcon)
-
