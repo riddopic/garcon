@@ -219,7 +219,7 @@ class Object
   end
 
   # @param [String] name
-  #   The name of the constant to get, e.g. "Merb::Router".
+  #   The name of the constant to get, e.g. "Garcon::Check".
   #
   # @param [Object] value
   #   The value to assign to the constant.
@@ -298,19 +298,6 @@ class Object
   def in?(arrayish, *more)
     arrayish = more.unshift(arrayish) unless more.empty?
     arrayish.include?(self)
-  end
-
-  # Add instance_variable_defined? for backward compatibility.
-  #
-  # @param [Symbol, String] variable
-  #
-  # @return [Boolean]
-  #   True if the object has the given instance variable defined
-  #
-  unless respond_to?(:instance_variable_defined?)
-    def instance_variable_defined?(variable)
-      instance_variables.include?(variable.to_s)
-    end
   end
 
   # Get or set state of object. You can think of #object_state as an in-code
