@@ -47,11 +47,12 @@ execute 'setenforce 0' do
   action   :run
 end
 
-cookbook_file '/root/.bashrc' do
-  source   'bashrc'
+template '/root/.bashrc' do
+  source   'bashrc.erb'
   owner    'root'
   group    'root'
   mode      00644
+  variables version: Garcon::VERSION.dup
   only_if { node[:garcon][:civilize][:dotfiles] }
   action   :create
 end

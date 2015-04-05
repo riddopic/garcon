@@ -21,7 +21,7 @@ require_relative 'resource/blender'
 require_relative 'resource/chef_helpers'
 require_relative 'resource/jambalaya'
 require_relative 'resource/log'
-#require_relative 'resource/marzipan'
+# require_relative 'resource/marzipan'
 require_relative 'resource/node'
 require_relative 'resource/patissier'
 require_relative 'resource/secret_bag'
@@ -151,4 +151,8 @@ unless Chef::Recipe.ancestors.include?(Garcon::Interpolation)
   Chef::Recipe.send(:include,   Garcon::Interpolation)
   Chef::Resource.send(:include, Garcon::Interpolation)
   Chef::Provider.send(:include, Garcon::Interpolation)
+end
+
+unless Chef::Resource.method_defined?(:run_now)
+  Chef::Resource.send(:include, Garcon::RunNow::Mixin)
 end

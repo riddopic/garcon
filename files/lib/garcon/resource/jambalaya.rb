@@ -21,6 +21,28 @@ require 'chef/resource_collection'
 require 'chef/runner'
 
 module Garcon
+  module RunNow
+    module Mixin
+      # Adds a `run_now` method onto Resources so you can immediately execute
+      # the resource block. This is a shortcut so you do not have to set the
+      # action to :nothing, and then use the `.run_action` method with the
+      # desired action.
+      #
+      # @example
+      #     service 'sshd' do
+      #       action [:enable, :start]
+      #     end.run_now
+      #
+      def run_now(resource = nil)
+        resource ||= self
+        actions = Array(resource.action)
+        Chef::Log.debug "Immediate execution of #{resource.name} #{actions}"
+        resource.action(:nothing)
+        actions.each { |action| resource.run_action(action) }
+      end
+    end
+  end
+
   class Jambalaya < Chef::ResourceCollection
     attr_accessor :parent
 

@@ -64,6 +64,11 @@ if node[:garcon][:civilize][:ruby] && !defined?(AwesomePrint)
     block  { Chef::Recipe.send(:require, 'ap') }
     action   :nothing
   end
+else
+  ruby_block :awesome_print do
+    block  { Chef::Recipe.send(:require, 'ap') }
+    action   :create
+  end
 end
 
 #  T H I S   R E C I P E   I S   F O R   D E V E L O P M E N T   O N L Y !

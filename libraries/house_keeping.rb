@@ -37,8 +37,8 @@ class Chef
 
       # Attributes
       attribute :path,
-        kind_of:        String,
-        callbacks:    { path: ->(path) { validate_path(path, :dir) }},
+        kind_of:String,
+        callbacks:{ path: ->(path) { validate_path(path, :dir) }},
         name_attribute: true
       attribute :exclude,
         kind_of: [String, Regexp],

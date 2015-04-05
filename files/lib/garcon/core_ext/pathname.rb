@@ -21,21 +21,25 @@ module Garcon
   # Expand a path with late-evaluated segments.
   # Calls expand_path -- '~' becomes $HOME, '..' is expanded, etc.
   #
-  # @example A symbol represents a segment to expand
-  #   Pathname.register_path(:conf_dir, '/etc/openldap')
-  #   Pathname.path_to(:conf_dir)              # => '/etc/openldap'
-  #   Pathname.path_to(:conf_dir, ldap.conf)   # => '/etc/openldap/ldap.conf'
+  # @example
+  #   A symbol represents a segment to expand
+  #     Pathname.register_path(:conf_dir, '/etc/openldap')
+  #     Pathname.path_to(:conf_dir)            # => '/etc/openldap'
+  #     Pathname.path_to(:conf_dir, ldap.conf) # => '/etc/openldap/ldap.conf'
   #
-  # @example References aren't expanded until they're read
-  #   Pathname.register_path(:conf_dir, '/etc/openldap')
-  #   Pathname.register_path(:ldap, :conf_dir, 'ldap.conf')
-  #   Pathname.path_to(:ldap)                  # => '/etc/openldap/ldap.conf'
+  # @example
+  #   References aren't expanded until they're read
+  #     Pathname.register_path(:conf_dir, '/etc/openldap')
+  #     Pathname.register_path(:ldap, :conf_dir, 'ldap.conf')
+  #     Pathname.path_to(:ldap)                # => '/etc/openldap/ldap.conf'
   #
-  # @example If we change the conf_dir, everything under it changes as well
-  #   Pathname.register_path(:conf_dir, '~/.openldap.d')
-  #   Pathname.path_to(:ldap)                  # => '/root/openldap.d/ldap.conf'
+  # @example
+  #   If we change the conf_dir, everything under it changes as well
+  #     Pathname.register_path(:conf_dir, '~/.openldap.d')
+  #     Pathname.path_to(:ldap)                # => '/root/openldap.d/ldap.conf'
   #
-  # @example References can be relative, and can hold symbols themselves
+  # @exampl
+  #   References can be relative, and can hold symbols themselves
   #     Pathname.register_path(:conf_dir, '/etc', :appname, :environment)
   #     Pathname.register_path(:appname, 'app_awesome')
   #     Pathname.register_path(:environment, 'dev')

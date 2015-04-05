@@ -78,10 +78,17 @@ class DevReporter < Chef::Handler
       resources.sort_by { |k, v| -v }.each do |resource, run_time|
         puts '%19f  %s' % [run_time, resource]
       end
-      puts '+------------------------------------------------------------------------------+'
+      puts '+------------------------------------------------------------------+'
       puts ''
       puts "Chef Run Completed in #{run_time} on #{node.name}. Updated " \
            "#{updates} of #{total} resources."
+
+      cookbooks = run_context.cookbook_collection
+      puts
+      puts "✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘"
+      puts "****** Cookbooks: #{cookbooks.keys.map { |x| cookbooks[x].name.to_s + " " + cookbooks[x].version} }"
+      puts "✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘ ✗ ✘"
+      puts
       puts "Slowest Resource: #{full_name(@max)} (%.6fs)"%[@max_time]
       puts ''
       puts "#{@data}"

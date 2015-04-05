@@ -65,9 +65,9 @@ if [ "$PS1" ]; then
       PS1="$Red$FancyX "
     fi
     if [[ $EUID == 0 ]]; then
-      PS1+="$Black $YellowBack garcon@mudbox $Reset $Red \\u@\\h"
+      PS1+="$Black $YellowBack GARÇON v#{@version} $Reset $Red \\u@\\h"
     else
-      PS1+="$Black $YellowBack GARCON@MUDBOX $Reset $Green \\u@\\h"
+      PS1+="$Black $YellowBack Garçon v#{@version} $Reset $Green \\u@\\h"
     fi
     PS1+="$Blue\\w \\\$$Reset "
   }
