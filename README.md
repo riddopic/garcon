@@ -379,7 +379,7 @@ If you have not yet installed Homebrew do so now:
 
 Next install Homebrew Cask:
 
-    brew tap phinze/homebrew-cask && brew install brew-cask
+    brew install caskroom/cask/brew-cask
 
 Then, to get Vagrant installed run this command:
 
