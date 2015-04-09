@@ -28,29 +28,46 @@
 #      |     ||  |  ||  .  Y\     |l     !|  |  ||  T
 #      l___,_jl__j__jl__j\_j \____j \___/ l__j__jl__j
 
-require_relative '../files/lib/garcon'
-
-module Garcon
-  # Cryptor for this session.
-  Garcon.crypto.password = SecureRandom.base64(18)
-  Garcon.crypto.salt     = Crypto.salted_hash(Garcon.crypto.password)[:salt]
-
-  def monitor
-    @monitor ||= Monitor.new
-  end
-end
-
-# Cache the node object for profit and gross revenue margins.
+# begin
+#   require 'garcon'
+# rescue LoadError
+#   run_context ||= Chef::RunContext.new(
+#     Chef::Node.new, {},
+#     Chef::EventDispatch::Dispatcher.new)
+#   chef_gem = Chef::Resource::ChefGem.new('garcon', run_context)
+#   chef_gem.compile_time(true) if respond_to?(:compile_time)
+#   chef_gem.run_action(:install)
+#   require 'garcon'
+# end
 #
-class Chef::Resource::NodeCache < Chef::Resource
-  include Garcon(blender: true)
-  attribute(:name,  kind_of: String, name_attribute: true)
-  attribute(:cache, kinf_of: Hash,   default: lazy { node })
-  action(:run) do
-    Garcon.config.stash.load(node: new_resource.node)
+# def monitor
+#   @monitor ||= Monitor.new
+# end
+
+class Chef
+  class Recipe
+
+    def self.init
+      require 'garcon'
+    rescue LoadError
+      run_context ||= Chef::RunContext.new(
+        Chef::Node.new, {},
+        Chef::EventDispatch::Dispatcher.new)
+      chef_gem = Chef::Resource::ChefGem.new('garcon', run_context)
+      chef_gem.compile_time(true) if respond_to?(:compile_time)
+      chef_gem.run_action(:install)
+      require 'garcon'
+    end
+
+    def monitor
+      @monitor ||= Monitor.new
+    end
   end
 end
 
-Chef::Recipe.send(:include,   Garcon)
-Chef::Resource.send(:include, Garcon)
-Chef::Provider.send(:include, Garcon)
+Chef::Recipe.send(:init)
+
+Chef::Recipe.send(:include,    Garcon)
+Chef::Resource.send(:include,  Garcon)
+Chef::Provider.send(:include,  Garcon)
+Erubis::Context.send(:include, Garcon)

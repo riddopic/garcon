@@ -8,6 +8,9 @@ driver:
 provisioner:
   name: chef_zero
   require_chef_omnibus: true
+  attributes:
+    serf:
+      version: 0.6.4
 
 platforms:
 - name: centos-6
@@ -28,8 +31,9 @@ suites:
 - name: default
   run_list:
     - recipe[test_fixtures::default]
-    - recipe[garcon::default]
     - recipe[garcon::civilize]
     - recipe[garcon::development]
+  driver:
+    hostname: garcon.mudbox.dev
   excludes:
     - centos-7

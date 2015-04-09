@@ -21,6 +21,7 @@
 #
 
 include_recipe 'yum-epel::default'
+version = run_context.cookbook_collection[cookbook_name].metadata.version
 
 node[:garcon][:civilize][:docker].each do |pkg|
   package pkg do
@@ -47,31 +48,48 @@ execute 'setenforce 0' do
   action   :run
 end
 
-template '/root/.bashrc' do
-  source   'bashrc.erb'
+template '/etc/profile.d/ps1.sh' do
   owner    'root'
   group    'root'
   mode      00644
-  variables version: Garcon::VERSION.dup
-  only_if { node[:garcon][:civilize][:dotfiles] }
+  variables version: version
   action   :create
 end
 
-cookbook_file '/root/.inputrc' do
-  source   'inputrc'
-  owner    'root'
-  group    'root'
-  mode      00644
-  only_if { node[:garcon][:civilize][:dotfiles] }
-  action   :create
-end
+users = if node[:garcon][:civilize][:dotfiles].is_a?(TrueClass)
+          Array('root')
+        elsif node[:garcon][:civilize][:dotfiles].respond_to?(:to_ary)
+          users = node[:garcon][:civilize][:dotfiles]
+        elsif node[:garcon][:civilize][:dotfiles].respond_to?(:to_str)
+          users = Array(node[:garcon][:civilize][:dotfiles])
+        end
 
-%w[/tmp /var/tmp].each do |dir|
-  house_keeping dir do
-    recursive true
-    exclude   %r(/^ssh-*/i)
-    age       15
-    size     '10M'
-    action   :purge
+users.each do |user|
+  home = user =~ /root/ ? '/root' : "/home/#{user}"
+
+  cookbook_file "#{home}/.bashrc" do
+    source   'bashrc'
+    owner     user
+    group     user
+    mode      00644
+    action   :create
+  end
+
+  cookbook_file "#{home}/.inputrc" do
+    source   'inputrc'
+    owner     user
+    group     user
+    mode      00644
+    action   :create
   end
 end
+
+# %w[/tmp /var/tmp].each do |dir|
+#   house_keeping dir do
+#     recursive true
+#     exclude   %r(/^ssh-*/i)
+#     age       15
+#     size     '10M'
+#     action   :purge
+#   end
+# end

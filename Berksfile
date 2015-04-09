@@ -6,6 +6,7 @@ metadata
 
 group :integration do
   cookbook 'test_fixtures', path: 'test/fixtures/cookbooks/test_fixtures'
+  cookbook 'serf'
 end
 
 # cookbook 'plongeur', path: '../plongeur'
