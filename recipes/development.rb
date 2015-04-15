@@ -38,30 +38,28 @@ chef_handler 'DevReporter' do
   action     :enable
 end
 
-if node[:garcon][:civilize][:ruby]
-  chef_gem 'pry' do
-    compile_time(false) if respond_to?(:compile_time)
-    not_if  { gem_installed?('pry') }
-    action   :install
-  end
+chef_gem 'pry' do
+  compile_time(false) if respond_to?(:compile_time)
+  not_if  { gem_installed?('pry') }
+  action   :install
+end
 
-  chef_gem 'awesome_print' do
-    compile_time(false) if respond_to?(:compile_time)
-    not_if  { gem_installed?('awesome_print') }
-    action   :install
-  end
+chef_gem 'awesome_print' do
+  compile_time(false) if respond_to?(:compile_time)
+  not_if  { gem_installed?('awesome_print') }
+  action   :install
+end
 
-  ruby_block :pry do
-    block   { Chef::Recipe.send(:require, 'pry') }
-    only_if { gem_installed?('pry') }
-    action   :create
-  end
+ruby_block :pry do
+  block   { Chef::Recipe.send(:require, 'pry') }
+  only_if { gem_installed?('pry') }
+  action   :create
+end
 
-  ruby_block :awesome_print do
-    block   { Chef::Recipe.send(:require, 'ap') }
-    only_if { gem_installed?('awesome_print') }
-    action   :create
-  end
+ruby_block :awesome_print do
+  block   { Chef::Recipe.send(:require, 'ap') }
+  only_if { gem_installed?('awesome_print') }
+  action   :create
 end
 
 #  T H I S   R E C I P E   I S   F O R   D E V E L O P M E N T   O N L Y !

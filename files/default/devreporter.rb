@@ -1,5 +1,21 @@
 # encoding: UTF-8
 #
+# Author:    Stefano Harding <riddopic@gmail.com>
+# License:   Apache License, Version 2.0
+# Copyright: (C) 2014-2015 Stefano Harding
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 require 'chef'
 require 'chef/log'
@@ -30,6 +46,7 @@ class DevReporter < Chef::Handler
 
   def banner
     puts <<-EOF
+
 
                           .:  ;:. .:;S;:. .:;.;:. .:;S;:. .:;S;:.
                           S   ' S S  S    S  S    S     S  /
@@ -68,9 +85,11 @@ class DevReporter < Chef::Handler
       # Start droping puts because mash grinder faceplanted Chef::Log.info
       # logging changes random so excelent thanks Chef!
       #
+      puts ''
+      puts '(*|*) (*|*) (*|*) (*|*)'
       banner
       puts 'Elapsed Time  Cookbook             Version'.yellow
-      puts '------------  -------------------  ---------------------'.green
+      puts '------------  -------------------  ----------------------'.green
       cookbooks.sort_by { |k, v| -v }.each do |cookbook, run_time|
         ver = run_context.cookbook_collection[cookbook.to_sym].version
         puts '%19f  %-20s %-7s' % [run_time, cookbook, ver]
@@ -87,8 +106,8 @@ class DevReporter < Chef::Handler
       resources.sort_by { |k, v| -v }.each do |resource, run_time|
         puts '%19f  %s' % [run_time, resource]
       end
-      puts '+------------------------------------------------------------------'\
-           '------------+'.purple
+      puts '+-----------------------------------------------------------------'\
+           '-------------+'.purple
       puts ''
       puts "Chef Run Completed in #{run_time} on #{node.name}. Updated " \
            "#{updates} of #{total} resources."

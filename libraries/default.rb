@@ -28,34 +28,17 @@
 #      |     ||  |  ||  .  Y\     |l     !|  |  ||  T
 #      l___,_jl__j__jl__j\_j \____j \___/ l__j__jl__j
 
-# begin
-#   require 'garcon'
-# rescue LoadError
-#   run_context ||= Chef::RunContext.new(
-#     Chef::Node.new, {},
-#     Chef::EventDispatch::Dispatcher.new)
-#   chef_gem = Chef::Resource::ChefGem.new('garcon', run_context)
-#   chef_gem.compile_time(true) if respond_to?(:compile_time)
-#   chef_gem.run_action(:install)
-#   require 'garcon'
-# end
-#
-# def monitor
-#   @monitor ||= Monitor.new
-# end
-
 class Chef
   class Recipe
 
     def self.init
       require 'garcon'
     rescue LoadError
-      run_context ||= Chef::RunContext.new(
-        Chef::Node.new, {},
-        Chef::EventDispatch::Dispatcher.new)
-      chef_gem = Chef::Resource::ChefGem.new('garcon', run_context)
-      chef_gem.compile_time(true) if respond_to?(:compile_time)
-      chef_gem.run_action(:install)
+      g = Chef::Resource::ChefGem.new('garcon',
+          Chef::RunContext.new(Chef::Node.new, {},
+          Chef::EventDispatch::Dispatcher.new))
+      g.compile_time(true) if respond_to?(:compile_time)
+      g.run_action(:install)
       require 'garcon'
     end
 
