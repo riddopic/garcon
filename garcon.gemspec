@@ -17,11 +17,9 @@
 # limitations under the License.
 #
 
-require_relative 'files/lib/garcon/version'
-
 Gem::Specification.new do |gem|
   gem.name        =   'garcon'
-  gem.version     =    Garcon::VERSION.dup
+  gem.version     =   '1.1.1'
   gem.authors     = [ 'Stefano Harding' ]
   gem.email       = [ 'riddopic@gmail.com' ]
   gem.description =   'A useful collection of methods to make cooking more fun'
@@ -35,49 +33,47 @@ Gem::Specification.new do |gem|
   gem.extra_rdoc_files = %w[LICENSE README.md]
 
   gem.add_dependency 'chef',        '>= 11.0'
-  gem.add_dependency 'ridley',      '~> 4.1'
-  gem.add_dependency 'stove',       '~> 3.2', '>= 3.2.3'
   gem.add_dependency 'bundler'
-  gem.add_dependency 'thor'
+  gem.add_dependency 'addressable', '~> 2.3'
 
   # Development gems
-  gem.add_dependency 'addressable', '~> 2.3'
-  gem.add_dependency 'rake',        '~> 10.4'
-  gem.add_dependency 'yard',        '~> 0.8'
-  gem.add_dependency 'pry'
+  gem.add_development_dependency 'rake',        '~> 10.4'
+  gem.add_development_dependency 'yard',        '~> 0.8'
+  gem.add_development_dependency 'pry'
+  gem.add_development_dependency 'stove',       '~> 3.2', '>= 3.2.3'
+  gem.add_development_dependency 'thor'
 
   # Test gems
-  gem.add_dependency 'rspec',       '~> 3.2'
-  gem.add_dependency 'rspec-its',   '~> 1.2'
-  gem.add_dependency 'chefspec',    '~> 4.2'
-  gem.add_dependency 'fuubar',      '~> 2.0'
-  gem.add_dependency 'simplecov',   '~> 0.9'
-  gem.add_dependency 'foodcritic',  '~> 4.0'
-  gem.add_dependency 'serverspec'
-  gem.add_dependency 'inch'
-  gem.add_dependency 'yardstick'
-  gem.add_dependency 'guard'
-  gem.add_dependency 'guard-shell'
-  gem.add_dependency 'guard-yard'
-  gem.add_dependency 'guard-rubocop'
-  gem.add_dependency 'guard-foodcritic'
-  gem.add_dependency 'guard-kitchen'
-  gem.add_dependency 'guard-rspec'
-  gem.add_dependency 'ruby_gntp'
+  gem.add_development_dependency 'rspec',       '~> 3.2'
+  gem.add_development_dependency 'rspec-its',   '~> 1.2'
+  gem.add_development_dependency 'chefspec',    '~> 4.2'
+  gem.add_development_dependency 'fuubar',      '~> 2.0'
+  gem.add_development_dependency 'simplecov',   '~> 0.9'
+  gem.add_development_dependency 'foodcritic',  '~> 4.0'
+  gem.add_development_dependency 'berkshelf',   '~> 3.2'
+  gem.add_development_dependency 'serverspec'
+  gem.add_development_dependency 'inch'
+  gem.add_development_dependency 'yardstick'
+  gem.add_development_dependency 'guard'
+  gem.add_development_dependency 'guard-shell'
+  gem.add_development_dependency 'guard-yard'
+  gem.add_development_dependency 'guard-rubocop'
+  gem.add_development_dependency 'guard-foodcritic'
+  gem.add_development_dependency 'guard-kitchen'
+  gem.add_development_dependency 'guard-rspec'
+  gem.add_development_dependency 'ruby_gntp'
 
   # Integration gems
-  gem.add_dependency 'test-kitchen',    '~> 1.3'
-  gem.add_dependency 'kitchen-vagrant'
-  gem.add_dependency 'vagrant-wrapper'
-  gem.add_dependency 'kitchen-docker'
-  gem.add_dependency 'kitchen-sync'
-  gem.add_dependency 'berkshelf',       '~> 3.2'
-
-  # Versioning
-  gem.add_dependency 'version'
-  gem.add_dependency 'thor-scmversion'
-  gem.add_dependency 'semverse'
-
+  gem.add_development_dependency 'test-kitchen',    '~> 1.3'
+  gem.add_development_dependency 'kitchen-vagrant'
+  gem.add_development_dependency 'vagrant-wrapper'
+  gem.add_development_dependency 'kitchen-docker'
+  gem.add_development_dependency 'kitchen-sync'
   gem.add_development_dependency 'rubocop'
   gem.add_development_dependency 'geminabox-rake'
+
+  # Versioning
+  gem.add_development_dependency 'version'
+  gem.add_development_dependency 'thor-scmversion'
+  gem.add_development_dependency 'semverse'
 end
