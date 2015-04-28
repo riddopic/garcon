@@ -17,10 +17,6 @@
 # limitations under the License.
 #
 
-require 'chef'
-require 'yard'
-require 'open-uri'
-
 task default: 'test'
 
 desc 'Run all tests except `kitchen`'
@@ -33,18 +29,15 @@ desc 'Run kitchen integration tests'
 task test: ['kitchen:all']
 
 desc 'Build documentation'
-task doc: [:readme, :yard]
+task doc: %w(yard)
 
-desc 'Generate README.md from _README.md.erb'
-task :readme do
-  cmd = %w(knife cookbook doc -t _README.md.erb .)
-  system(*cmd)
-end
-
-YARD::Config.load_plugin 'redcarpet-ext'
-YARD::Rake::YardocTask.new do |t|
-  t.files = ['**/*.rb', '-', 'README.md', 'CHANGELOG.md', 'LICENSE']
-  t.options = ['--markup-provider=redcarpet', '--markup=markdown']
+desc 'Generate Ruby documentation'
+task :yard do
+  require 'yard'
+  YARD::Rake::YardocTask.new do |t|
+    t.files = ['**/*.rb', '-', 'README.md', 'LICENSE']
+    t.stats_options = %w(--list-undoc)
+  end
 end
 
 # rubocop style checker

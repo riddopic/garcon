@@ -1,8 +1,11 @@
 # encoding: UTF-8
 #
-# Author:    Stefano Harding <riddopic@gmail.com>
-# License:   Apache License, Version 2.0
-# Copyright: (C) 2014-2015 Stefano Harding
+# Cookbook Name:: garcon
+# Recipe:: development
+#
+# Author: Stefano Harding <riddopic@gmail.com>
+#
+# Copyright (C) 2014-2015 Stefano Harding
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +20,6 @@
 # limitations under the License.
 #
 
-include_recipe 'garcon::development'
-
 civilize 'Me Please!' do
   iptables  true
   selinux   true
@@ -26,11 +27,4 @@ civilize 'Me Please!' do
   ruby      true
   docker %w[tar htop initscripts]
   action   :run
-end
-
-template '/etc/motd' do
-  owner  'root'
-  group  'root'
-  mode    00644
-  action :create
 end

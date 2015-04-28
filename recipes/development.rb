@@ -21,6 +21,7 @@
 #
 
 #  T H I S   R E C I P E   I S   F O R   D E V E L O P M E N T   O N L Y !
+
 include_recipe 'chef_handler::default'
 
 reporter = ::File.join(node[:chef_handler][:handler_path], 'devreporter.rb')
