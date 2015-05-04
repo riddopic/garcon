@@ -28,8 +28,7 @@ suites:
 - name: default
   run_list:
     - recipe[test_fixtures::default]
-    - recipe[garcon::default]
-    - recipe[garcon::civilize]
-    - recipe[garcon::development]
+  driver:
+    hostname: garcon.mudbox.dev
   excludes:
     - centos-7

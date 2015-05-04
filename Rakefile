@@ -1,8 +1,21 @@
 # encoding: UTF-8
-
-require 'chef'
-require 'yard'
-require 'open-uri'
+#
+# Author:    Stefano Harding <riddopic@gmail.com>
+# License:   Apache License, Version 2.0
+# Copyright: (C) 2014-2015 Stefano Harding
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 task default: 'test'
 
@@ -16,18 +29,15 @@ desc 'Run kitchen integration tests'
 task test: ['kitchen:all']
 
 desc 'Build documentation'
-task doc: [:readme, :yard]
+task doc: %w(yard)
 
-desc 'Generate README.md from _README.md.erb'
-task :readme do
-  cmd = %w(knife cookbook doc -t _README.md.erb .)
-  system(*cmd)
-end
-
-YARD::Config.load_plugin 'redcarpet-ext'
-YARD::Rake::YardocTask.new do |t|
-  t.files = ['**/*.rb', '-', 'README.md', 'CHANGELOG.md', 'LICENSE']
-  t.options = ['--markup-provider=redcarpet', '--markup=markdown']
+desc 'Generate Ruby documentation'
+task :yard do
+  require 'yard'
+  YARD::Rake::YardocTask.new do |t|
+    t.files = ['**/*.rb', '-', 'README.md', 'LICENSE']
+    t.stats_options = %w(--list-undoc)
+  end
 end
 
 # rubocop style checker

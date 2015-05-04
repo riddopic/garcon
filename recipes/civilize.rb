@@ -1,7 +1,7 @@
 # encoding: UTF-8
 #
 # Cookbook Name:: garcon
-# Recipe:: civilize
+# Recipe:: development
 #
 # Author: Stefano Harding <riddopic@gmail.com>
 #
@@ -20,58 +20,11 @@
 # limitations under the License.
 #
 
-include_recipe 'yum-epel::default'
-
-node[:garcon][:civilize][:docker].each do |pkg|
-  package pkg do
-    only_if { docker? }
-    action :install
-  end
-end
-
-node[:garcon][:civilize][:rhel_svcs].each do |svc|
-  service svc do
-    action [:stop, :disable]
-  end
-end
-
-execute 'iptables -F' do
-  ignore_failure true
-  only_if { node[:garcon][:civilize][:iptables] && !docker? }
+civilize 'Me Please!' do
+  iptables  true
+  selinux   true
+  dotfiles  true
+  ruby      true
+  docker %w[tar htop initscripts]
   action   :run
-end
-
-execute 'setenforce 0' do
-  ignore_failure true
-  only_if { node[:garcon][:civilize][:selinux] && selinux? }
-  action   :run
-end
-
-template '/root/.bashrc' do
-  source   'bashrc.erb'
-  owner    'root'
-  group    'root'
-  mode      00644
-  variables version: Garcon::VERSION.dup
-  only_if { node[:garcon][:civilize][:dotfiles] }
-  action   :create
-end
-
-cookbook_file '/root/.inputrc' do
-  source   'inputrc'
-  owner    'root'
-  group    'root'
-  mode      00644
-  only_if { node[:garcon][:civilize][:dotfiles] }
-  action   :create
-end
-
-%w[/tmp /var/tmp].each do |dir|
-  house_keeping dir do
-    recursive true
-    exclude   %r(/^ssh-*/i)
-    age       15
-    size     '10M'
-    action   :purge
-  end
 end

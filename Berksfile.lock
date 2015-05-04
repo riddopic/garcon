@@ -2,18 +2,19 @@ DEPENDENCIES
   garcon
     path: .
     metadata: true
+  serf
   test_fixtures
     path: test/fixtures/cookbooks/test_fixtures
 
 GRAPH
   chef_handler (1.1.6)
-  garcon (1.1.0)
+  garcon (1.1.2)
     chef_handler (>= 0.0.0)
     yum (>= 0.0.0)
-    yum-epel (>= 0.0.0)
+  logrotate (1.9.1)
+  serf (0.9.0)
+    logrotate (>= 0.0.0)
   test_fixtures (0.1.0)
     chef_handler (>= 0.0.0)
     garcon (>= 0.0.0)
-  yum (3.5.3)
-  yum-epel (0.6.0)
-    yum (~> 3.0)
+  yum (3.6.0)

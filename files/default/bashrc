@@ -1,9 +1,11 @@
 # .bashrc
 
+# Source global definitions
 if [ -f /etc/bashrc ]; then
 	. /etc/bashrc
 fi
 
+# User specific aliases and functions
 alias   h='history'
 alias  l.='ls -dGFh .* --color=auto' 2>/dev/null
 alias  ll='ls -lGFh --color=auto' 2>/dev/null
@@ -14,3 +16,4 @@ alias cls='clear'
 
 set -o vi
 export EDITOR=vi
+
