@@ -8,9 +8,6 @@ driver:
 provisioner:
   name: chef_zero
   require_chef_omnibus: true
-  attributes:
-    serf:
-      version: 0.6.4
 
 platforms:
 - name: centos-6
