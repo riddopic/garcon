@@ -24,5 +24,3 @@ metadata
 group :integration do
   cookbook 'test_fixtures', path: 'test/fixtures/cookbooks/test_fixtures'
 end
-
-# cookbook 'plongeur', path: '../plongeur'

@@ -18,15 +18,7 @@
 #
 
 include_recipe 'garcon::development'
-
-civilize 'Me Please!' do
-  iptables  true
-  selinux   true
-  dotfiles  true
-  ruby      true
-  docker %w[tar htop initscripts]
-  action   :run
-end
+include_recipe 'garcon::civilize'
 
 template '/etc/motd' do
   owner  'root'
