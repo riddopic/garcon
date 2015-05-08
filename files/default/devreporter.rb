@@ -20,7 +20,7 @@
 require 'chef'
 require 'chef/log'
 require 'chef/handler'
-require 'garcon'
+require 'garcun'
 
 class DevReporter < Chef::Handler
   attr_reader :resources, :immediate, :delayed, :always

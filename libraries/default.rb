@@ -32,14 +32,14 @@ class Chef
   class Recipe
 
     def self.init
-      require 'garcon'
+      require 'garcun'
     rescue LoadError
-      g = Chef::Resource::ChefGem.new('garcon',
+      g = Chef::Resource::ChefGem.new('garcun',
           Chef::RunContext.new(Chef::Node.new, {},
           Chef::EventDispatch::Dispatcher.new))
       g.compile_time(true) if respond_to?(:compile_time)
       g.run_action(:install)
-      require 'garcon'
+      require 'garcun'
     end
 
     def monitor

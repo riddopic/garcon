@@ -2,33 +2,19 @@
 #<% require 'kitchen-sync' %>
 ---
 driver:
-  name: docker
-  socket: <%= ENV['DOCKER_HOST'] %>
+  name: vagrant
 
 provisioner:
   name: chef_zero
   require_chef_omnibus: true
 
 platforms:
-- name: centos-6
-  driver:
-    image: centos/centos6
-    platform: centos
-  run_list:
-    - recipe[yum]
-
-- name: centos-7
-  driver:
-    image: centos/centos7
-    platform: centos
-  run_list:
-    - recipe[yum]
+  - name: centos-6
+  - name: centos-7
+  - name: ubuntu-12.04
+  - name: ubuntu-14.04
 
 suites:
-- name: default
-  run_list:
-    - recipe[test_fixtures::default]
-  driver:
-    hostname: garcon.mudbox.dev
-  excludes:
-    - centos-7
+  - name: default
+    run_list:
+      - recipe[test_fixtures::default]

@@ -21,14 +21,20 @@
 #
 
 default[:garcon][:repo][:gpgcheck]   = true
-default[:garcon][:repo][:gpgkey]     = 'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
+default[:garcon][:repo][:gpgkey]     = case platform_version.to_i
+when 7
+  'http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7'
+else
+  'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
+end
+
 default[:garcon][:repo][:mirrorlist] = case platform_version.to_i
 when 5
   'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
 when 6, 2013, 2014
   'http://mirrorlist.repoforge.org/el6/mirrors-rpmforge'
 when 7
-  'http://mirrorlist.repoforge.org/el7/mirrors-rpmforge'
+  'http://mirrors.fedoraproject.org/mirrorlist?repo=epel-7&arch=$basearch'
 end
 
 # Civilize a node into behaving properly and not being the animal it is.
