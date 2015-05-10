@@ -1,8 +1,5 @@
 # encoding: UTF-8
 #
-# Cookbook Name:: garcon
-# Libraries:: default
-#
 # Author:    Stefano Harding <riddopic@gmail.com>
 # License:   Apache License, Version 2.0
 # Copyright: (C) 2014-2015 Stefano Harding

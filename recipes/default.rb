@@ -17,11 +17,4 @@
 # limitations under the License.
 #
 
-civilize 'Me Please!' do
-  iptables  true
-  selinux   true
-  dotfiles  true
-  ruby      true
-  docker %w[tar htop initscripts]
-  action   :run
-end
+Chef::Log.warn '٩(͡๏̯͡๏)۶     ٩͡[๏̯͡๏]۶     ٩(●̮̮̃•̃)۶    (⊙_◎)   ε(●̮̮̃•̃)з     -\(°_o)/¯'
