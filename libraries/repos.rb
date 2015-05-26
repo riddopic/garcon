@@ -17,25 +17,29 @@
 # limitations under the License.
 #
 
-# Civilize a node into behaving properly and not being the animal it is.
-default[:garcon][:civilize].tap do |civilize|
-  civilize[:iptables]  = true
-  civilize[:selinux]   = true
-  civilize[:dotfiles]  = true
-  civilize[:ruby]      = true
-  civilize[:docker]    = %w[
-    tar
-    htop
-    initscripts
-  ]
-  civilize[:rhel_svcs] = %w[
-    autofs
-    avahi-daemon
-    bluetooth
-    cpuspeed
-    cups
-    gpm
-    haldaemon
-    messagebu
-  ]
+module Garcon
+  #
+  # Return the repos for Garçon to use for aria2.
+  #
+  module Repos
+    def gpgkey
+      case platform_version.to_i
+      when 7
+        'http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7'
+      else
+        'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
+      end
+    end
+
+    def mirrorlist
+      case platform_version.to_i
+      when 5
+        'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
+      when 6, 2013, 2014
+        'http://mirrorlist.repoforge.org/el6/mirrors-rpmforge'
+      when 7
+        'http://mirrors.fedoraproject.org/mirrorlist?repo=epel-7&arch=$basearch'
+      end
+    end
+  end
 end

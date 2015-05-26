@@ -17,11 +17,11 @@
 # limitations under the License.
 #
 
-civilize 'Me Please!' do
-  iptables  true
-  selinux   true
-  dotfiles  true
-  ruby      true
-  docker %w[tar htop initscripts]
-  action   :run
+civilize 'Me Please!'
+
+template '/etc/init.d/ntpd' do
+  owner  'root'
+  group  'root'
+  mode    00754
+  action :create
 end

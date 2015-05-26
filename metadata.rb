@@ -25,10 +25,12 @@ description      'A useful collection of methods to make cooking more fun.'
 long_description  IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          '1.1.2'
 
-supports 'centos',      '>= 5.10'
-supports 'oracle',      '>= 5.10'
-supports 'redhat',      '>= 5.10'
-supports 'scientific',  '>= 5.10'
+%w[amazon centos debian fedora oracle redhat ubuntu].each do |os|
+  supports os
+end
 
 depends 'chef_handler'
+depends 'motd-tail'
 depends 'yum'
+depends 'apt'
+

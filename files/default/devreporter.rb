@@ -23,9 +23,11 @@ require 'chef/handler'
 require 'garcun'
 
 class DevReporter < Chef::Handler
-  attr_reader :resources, :immediate, :delayed, :always
 
   def initialize(opts = {})
+    @cookbooks = Hash.new(0)
+    @recipes   = Hash.new(0)
+    @resources = Hash.new(0)
   end
 
   def full_name(resource)
@@ -45,79 +47,58 @@ class DevReporter < Chef::Handler
   end
 
   def banner
-    puts <<-EOF
-
-
-                          .:  ;:. .:;S;:. .:;.;:. .:;S;:. .:;S;:.
-                          S   ' S S  S    S  S    S     S  /
-                          `:;S;:' `:;S;:' `:;S;:' `:;S;:' `:;S;:'
-          .g8"""bgd
-        .dP'     `M
-        dM'       `  ,6"Yb.  `7Mb,od8 ,p6"bo   ,pW"Wq.`7MMpMMMb.
-        MM          8)   MM    MM' "'6M'  OO  6W'   `Wb MM    MM
-        MM.    `7MMF',pm9MM    MM    8M       8M     M8 MM    MM
-        `Mb.     MM 8M   MM    MM    YM.    , YA.   ,A9 MM    MM
-          `"bmmmdPY `Moo9^Yo..JMML.   YMbmd'   `Ybmd9'.JMML  JMML.
-                                        bog
-                                         od              V #{Garcon::VERSION}
-
-    EOF
+    puts ''
+    puts '   ____ _  _ ____ ____   ___  ____ ____ ____ _ _    ____ ____'
+    puts "   |___ |--| |=== |---   |--' |--< [__] |--- | |___ |=== |--<"
+    puts ''
   end
 
   def report
     if run_status.success?
-      cookbooks = Hash.new(0)
-      recipes   = Hash.new(0)
-      resources = Hash.new(0)
       run_time  = humanize(run_status.elapsed_time)
       updates   = run_status.updated_resources.length
       total     = run_status.all_resources.length
 
       all_resources.each do |r|
-        cookbooks[r.cookbook_name]                      += r.elapsed_time
-        recipes["#{r.cookbook_name}::#{r.recipe_name}"] += r.elapsed_time
-        resources["#{r.resource_name}[#{r.name}]"]       = r.elapsed_time
+        @cookbooks[r.cookbook_name]                      += r.elapsed_time
+        @recipes["#{r.cookbook_name}::#{r.recipe_name}"] += r.elapsed_time
+        @resources["#{r.resource_name}[#{r.name}]"]       = r.elapsed_time
       end
 
-      @max_time = all_resources.max_by { |r| r.elapsed_time      }.elapsed_time
-      @max      = all_resources.max_by { |r| full_name(r).length }
+      max_time = all_resources.max_by(&:elapsed_time).elapsed_time
+      slow_resource = all_resources.max_by { |r| full_name(r).length }
 
-      # Start droping puts because mash grinder faceplanted Chef::Log.info
-      # logging changes random so excelent thanks Chef!
-      #
-      puts ''
-      puts '(*|*) (*|*) (*|*) (*|*)'
       banner
       puts 'Elapsed Time  Cookbook             Version'.yellow
-      puts '------------  -------------------  ----------------------'.green
-      cookbooks.sort_by { |k, v| -v }.each do |cookbook, run_time|
+      puts '------------  -------------------  --------------------------'.green
+      @cookbooks.sort_by { |_, v| -v }.each do |cookbook, elapsed_time|
         ver = run_context.cookbook_collection[cookbook.to_sym].version
-        puts '%19f  %-20s %-7s' % [run_time, cookbook, ver]
+        printf "%19f %-20s %-7s\n", elapsed_time, cookbook, ver
       end
       puts ''
       puts 'Elapsed Time  Recipe'.orange
-      puts '------------  -------------------------------------------'.green
-      recipes.sort_by { |k, v| -v }.each do |recipe, run_time|
-        puts '%19f  %s' % [run_time, recipe]
+      puts '------------  -----------------------------------------------'.green
+      @recipes.sort_by { |_, v| -v }.each do |recipe, elapsed_time|
+        printf "%19f  %s\n", elapsed_time, recipe
       end
       puts ''
       puts 'Elapsed Time  Resource'.orange
-      puts '------------  -------------------------------------------'.green
-      resources.sort_by { |k, v| -v }.each do |resource, run_time|
-        puts '%19f  %s' % [run_time, resource]
+      puts '------------  -----------------------------------------------'.green
+      @resources.sort_by { |_, v| -v }.each do |resource, elapsed_time|
+        printf "%19f  %s\n", elapsed_time, resource
       end
-      puts '+-----------------------------------------------------------------'\
-           '-------------+'.purple
+      puts "\n+----------------------------------------------------------" \
+           "--------------------+\n".purple
       puts ''
       puts "Chef Run Completed in #{run_time} on #{node.name}. Updated " \
            "#{updates} of #{total} resources."
 
-      cookbooks = run_context.cookbook_collection
       puts
-      puts "Slowest Resource: #{full_name(@max)} (%.6fs)"%[@max_time]
+      printf "Slowest Resource: #{full_name(slow_resource)} (%.6fs)\n", max_time
       puts ''
       puts Faker::Hacker.say_something_smart
       puts ''
+
     elsif run_status.failed?
       banner
       puts "Chef FAILED in #{run_time} on #{node.name} with exception:".orange

@@ -26,8 +26,13 @@
 #      l___,_jl__j__jl__j\_j \____j \___/ l__j__jl__j
 
 class Chef
+  #
+  # Add the ability to load Garçun into the Chef::Recipe class.
+  #
   class Recipe
-
+    #
+    # Load Garçun into the Chef::Recipe class so it's avalible to use.
+    #
     def self.init
       require 'garcun'
     rescue LoadError

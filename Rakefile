@@ -29,14 +29,14 @@ desc 'Run kitchen integration tests'
 task test: ['kitchen:all']
 
 desc 'Build documentation'
-task doc: %w(yard)
+task doc: %w[yard]
 
 desc 'Generate Ruby documentation'
 task :yard do
   require 'yard'
   YARD::Rake::YardocTask.new do |t|
     t.files = ['**/*.rb', '-', 'README.md', 'LICENSE']
-    t.stats_options = %w(--list-undoc)
+    t.stats_options = %w[--list-undoc]
   end
 end
 

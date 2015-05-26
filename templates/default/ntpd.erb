@@ -1,0 +1,28 @@
+### BEGIN INIT INFO
+# Provides:          ntpd
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      S 0 1 6
+# Short-Description: ntpd initscript
+# Description:       ntpd
+### END INIT INFO
+#
+# FAKER NTPD FOR DOCKER FOR NTPD HACKER FAKER
+
+case "$1" in
+  start)
+    echo "   [OK]"
+    ;;
+  stop)
+    echo "Stopping ntpd..."
+    ;;
+  restart)
+    echo "Stopping ntpd..."
+    echo "   [OK]"
+    ;;
+  *)
+    echo >&2 "Usage: $0 {start|stop|restart}"
+    exit 1
+    ;;
+esac

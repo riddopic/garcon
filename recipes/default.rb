@@ -16,5 +16,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-Chef::Log.warn '٩(͡๏̯͡๏)۶     ٩͡[๏̯͡๏]۶     ٩(●̮̮̃•̃)۶    (⊙_◎)   ε(●̮̮̃•̃)з     -\(°_o)/¯'
