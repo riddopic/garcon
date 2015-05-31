@@ -30,7 +30,11 @@ version          '1.1.3'
 end
 
 depends 'chef_handler'
+depends 'yum-centos'
+depends 'yum-fedora'
+depends 'yum-amazon'
 depends 'motd-tail'
+depends 'yum-epel'
 depends 'yum'
 depends 'apt'
 
