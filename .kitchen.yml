@@ -2,11 +2,17 @@
 #<% require 'kitchen-sync' %>
 ---
 driver:
-  name: vagrant
+  name: docker
 
 provisioner:
   name: chef_zero
   require_chef_omnibus: true
+  attributes:
+    garcon:
+      civilize:
+        dotfiles:
+          - root
+          - kitchen
 
 platforms:
   - name: centos-6
