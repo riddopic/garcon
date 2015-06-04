@@ -26,17 +26,6 @@ gem 'rspec'
 gem 'rubocop'
 gem 'foodcritic'
 
-group :test, :integration do
-  gem 'chefspec'
-  gem 'test-kitchen'
-  gem 'kitchen-sync'
-  gem 'kitchen-vagrant'
-  gem 'kitchen-docker'
-  gem 'serverspec'
-end
-
-group :plugins do
-  gem 'vagrant-berkshelf'
-  gem 'vagrant-chef-zero'
-  gem 'vagrant-omnibus'
-end
+gem 'test-kitchen'
+gem 'kitchen-sync'
+gem 'kitchen-docker'
