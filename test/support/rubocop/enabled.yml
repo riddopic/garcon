@@ -919,15 +919,15 @@ Style/PercentLiteralDelimiters:
   StyleGuide: https://github.com/bbatsov/ruby-style-guide#percent-literal-braces
   Enabled: true
   PreferredDelimiters:
-    "%": "()"
-    "%i": "()"
-    "%q": "()"
-    "%Q": "()"
+    "%": "[]"
+    "%i": "[]"
+    "%q": "[]"
+    "%Q": "[]"
     "%r": "{}"
-    "%s": "()"
-    "%w": "()"
-    "%W": "()"
-    "%x": "()"
+    "%s": "[]"
+    "%w": "[]"
+    "%W": "[]"
+    "%x": "[]"
 
 # Supports --auto-correct
 Style/PercentQLiterals:

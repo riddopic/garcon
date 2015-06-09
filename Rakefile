@@ -17,49 +17,78 @@
 # limitations under the License.
 #
 
-task default: 'test'
+require 'bundler/setup'
+require 'rspec/core/rake_task'
+require 'rubocop/rake_task'
+require 'kitchen/rake_tasks'
+require 'foodcritic'
+require 'yard'
 
-desc 'Run all tests except `kitchen`'
-task test: [:yard, :rubocop, :foodcritic, :spec]
+YARD::Rake::YardocTask.new do |t|
+  t.files = %w[**/*.rb - README.md LICENSE]
+  t.stats_options = %w[--list-undoc]
+end
 
-desc 'Run all tasks'
-task all: [:yard, :rubocop, :foodcritic, :spec, 'kitchen:all']
+namespace :style do
+  desc 'Run Ruby style checks'
+  RuboCop::RakeTask.new(:ruby) do |t|
+    t.options = %w[--display-cop-names --display-style-guide]
+  end
 
-desc 'Run kitchen integration tests'
-task test: ['kitchen:all']
-
-desc 'Build documentation'
-task doc: %w[yard]
-
-desc 'Generate Ruby documentation'
-task :yard do
-  require 'yard'
-  YARD::Rake::YardocTask.new do |t|
-    t.files = ['**/*.rb', '-', 'README.md', 'LICENSE']
-    t.stats_options = %w[--list-undoc]
+  desc 'Run Chef style checks'
+  FoodCritic::Rake::LintTask.new(:chef) do |t|
+    t.options = {
+      search_gems:   true,
+      tags:        ['~FC001'],
+      fail_tags:   ['any'],
+      chef_version: '11.6.0',
+      include:      'test/support/foodcritic/*'
+    }
   end
 end
 
-# rubocop style checker
-require 'rubocop/rake_task'
-RuboCop::RakeTask.new
+desc 'Run all style checks'
+task style: ['style:chef', 'style:ruby']
 
-# foodcritic chef lint
-require 'foodcritic'
-FoodCritic::Rake::LintTask.new do |t|
-  t.options = { tags: ['~FC001'], fail_tags: ['any'], include: 'test/support/foodcritic/*', }
+desc 'Run ChefSpec unit tests'
+RSpec::Core::RakeTask.new(:spec) do |t|
+  t.rspec_opts = '-c -f d'
+  t.pattern    = %w[test/unit/**/*_spec.rb]
 end
 
-# chefspec unit tests
-require 'rspec/core/rake_task'
-RSpec::Core::RakeTask.new(:chefspec) do |t|
-  t.rspec_opts = '--color --format progress'
+namespace :integration do
+  desc 'Run Test Kitchen with Docker'
+  task :docker do
+    Kitchen.logger = Kitchen.default_file_logger
+    Kitchen::Config.new.instances.each do |instance|
+      instance.test(:always)
+    end
+  end
+
+  desc 'Run Test Kitchen Concurrently for all instances'
+  task :concurrent do
+    Kitchen.logger = Kitchen.default_file_logger
+    @loader = Kitchen::Loader::YAML.new(local_config: '.kitchen.yml')
+    config = Kitchen::Config.new(loader: @loader)
+    concurrency = config.instances.size
+    queue = Queue.new
+    config.instances.each {|i| queue << i }
+    concurrency.times { queue << nil }
+    threads = []
+    concurrency.times do
+      threads << Thread.new do
+        while instance = queue.pop
+          instance.test(:always)
+        end
+      end
+    end
+    threads.map { |i| i.join }
+  end
 end
 
-# test-kitchen integration tests
-begin
-  require 'kitchen/rake_tasks'
-  Kitchen::RakeTasks.new
-rescue LoadError
-  task('kitchen:all') { puts 'Unable to run `test-kitchen`' }
+desc 'Run all tests on CI Platform'
+task :ci do
+  puts 'OK'
 end
+
+task default: ['style', 'spec', 'integration:docker']

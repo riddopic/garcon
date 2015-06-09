@@ -22,9 +22,11 @@ require 'chef/log'
 require 'chef/handler'
 require 'garcun'
 
+# Chef Handler that does cookbook profiling.
+#
 class DevReporter < Chef::Handler
-
-  def initialize(opts = {})
+  #
+  def initialize
     @cookbooks = Hash.new(0)
     @recipes   = Hash.new(0)
     @resources = Hash.new(0)
@@ -38,7 +40,7 @@ class DevReporter < Chef::Handler
     [[60, :seconds],
      [60, :minutes],
      [24, :hours],
-     [1000, :days] ].map do |count, name|
+     [1000, :days]].map do |count, name|
       if seconds > 0
         seconds, n = seconds.divmod(count)
         "#{n.to_i} #{name}"
@@ -60,7 +62,7 @@ class DevReporter < Chef::Handler
       total     = run_status.all_resources.length
 
       all_resources.each do |r|
-        @cookbooks[r.cookbook_name]                      += r.elapsed_time
+        @cookbooks[r.cookbook_name] += r.elapsed_time
         @recipes["#{r.cookbook_name}::#{r.recipe_name}"] += r.elapsed_time
         @resources["#{r.resource_name}[#{r.name}]"]       = r.elapsed_time
       end

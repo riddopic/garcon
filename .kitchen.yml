@@ -3,11 +3,16 @@
 ---
 driver:
   name: docker
+driver_config:
+  require_chef_omnibus: true
 
 provisioner:
   name: chef_zero
-  require_chef_omnibus: true
   attributes:
+    authorization:
+      sudo:
+        users: ['kitchen']
+        passwordless: true
     garcon:
       civilize:
         dotfiles:
@@ -15,10 +20,15 @@ provisioner:
           - kitchen
 
 platforms:
-  - name: centos-6
-  - name: centos-7
-  - name: fedora-21
   - name: ubuntu-14.04
+    run_list:
+    - recipe[apt]
+  - name: centos-6.6
+    run_list:
+    - recipe[yum]
+  - name: centos-7.1
+    run_list:
+    - recipe[yum]
 
 suites:
   - name: default
