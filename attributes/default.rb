@@ -26,6 +26,7 @@ default[:garcon][:civilize].tap do |civilize|
   civilize[:docker]    = %w[
     tar
     htop
+    passwd
     initscripts
   ]
   civilize[:rhel_svcs] = %w[
