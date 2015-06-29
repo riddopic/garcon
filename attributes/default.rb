@@ -40,3 +40,21 @@ default[:garcon][:civilize].tap do |civilize|
     messagebu
   ]
 end
+
+gpg = case platform_version.to_i
+      when 7
+        'http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7'
+      else
+        'http://apt.sw.be/RPM-GPG-KEY.dag.txt'
+      end
+default[:garcon][:repo][:gpg] = gpg
+
+url = case platform_version.to_i
+      when 5
+        'http://mirrorlist.repoforge.org/el5/mirrors-rpmforge'
+      when 6, 2013, 2014
+        'http://mirrorlist.repoforge.org/el6/mirrors-rpmforge'
+      when 7
+        'http://mirrors.fedoraproject.org/mirrorlist?repo=epel-7&arch=$basearch'
+      end
+default[:garcon][:repo][:url] = url
