@@ -19,9 +19,9 @@ if [ "$PS1" ]; then
       PS1="$Red$FancyX "
     fi
     if [[ $EUID == 0 ]]; then
-      PS1+="$Black $YellowBack GARÇON 𝘝<%= @version %> $Reset $Red \\u@\\h"
+      PS1+="$Black $YellowBack <%= @ps1_root_msg %> $Reset $Red \\u@\\h"
     else
-      PS1+="$Black $YellowBack Garçon 𝘝<%= @version %> $Reset $Green \\u@\\h"
+      PS1+="$Black $YellowBack <%= @ps1_usr_msg %> $Reset $Green \\u@\\h"
     fi
     PS1+="$Blue\\w \\\$$Reset "
   }

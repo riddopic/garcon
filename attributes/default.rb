@@ -19,11 +19,13 @@
 
 # Civilize a node into behaving properly and not being the animal it is.
 default[:garcon][:civilize].tap do |civilize|
-  civilize[:iptables]  = true
-  civilize[:selinux]   = true
-  civilize[:dotfiles]  = true
-  civilize[:ruby]      = true
-  civilize[:docker]    = %w[
+  civilize[:iptables]     = true
+  civilize[:selinux]      = true
+  civilize[:dotfiles]     = true
+  civilize[:ruby]         = true
+  civilize[:ps1_root_msg] = 'CHEF Managed'
+  civilize[:ps1_usr_msg]  = 'CHEF Managed'
+  civilize[:docker]       = %w[
     tar
     htop
     passwd
